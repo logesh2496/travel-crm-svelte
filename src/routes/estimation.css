@@ -1,0 +1,36 @@
+/* ── ESTIMATION BUILDER ── */
+@keyframes estPulse{0%,100%{box-shadow:0 0 0 0 rgba(13,124,110,.4)}50%{box-shadow:0 0 0 12px rgba(13,124,110,0)}}
+@keyframes estFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes estSlideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+@keyframes estStepDone{from{background:var(--bg2)}to{background:var(--success-light)}}
+.est-think-step{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:var(--radius);background:var(--bg2);font-size:13px;color:var(--text2);transition:all .4s;border:1.5px solid transparent}
+.est-think-step i{font-size:16px;width:20px;text-align:center;color:var(--text3)}
+.est-think-step.active{background:var(--blue-light);border-color:#bfdbfe;color:var(--blue-text);font-weight:600}
+.est-think-step.active i{color:var(--blue)}
+.est-think-step.done{background:var(--success-light);border-color:#bbf7d0;color:var(--success-text)}
+.est-think-step.done i{color:var(--success)}
+.est-think-step.done::after{content:'✓';margin-left:auto;font-weight:700;color:var(--success)}
+.est-card{background:var(--card);border:2px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;animation:estFadeIn .5s ease both;display:flex;flex-direction:column}
+.est-card-header{padding:18px 20px;color:#fff;position:relative;overflow:hidden}
+.est-card-header::before{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08)}
+.est-card-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(255,255,255,.2);margin-bottom:8px}
+.est-card-price{font-size:28px;font-weight:800;letter-spacing:-.5px;margin:4px 0}
+.est-card-ppax{font-size:12px;opacity:.8}
+.est-card-tagline{font-size:12px;opacity:.75;margin-top:6px}
+.est-card.profitable .est-card-header{background:linear-gradient(135deg,#1a2744,#c9972a)}
+.est-card.competitive .est-card-header{background:linear-gradient(135deg,#1e40af,#06b6d4)}
+.est-card.budget .est-card-header{background:linear-gradient(135deg,#166534,#4ade80)}
+.est-card.profitable{border-color:var(--gold);box-shadow:0 4px 24px rgba(201,151,42,.18)}
+.est-card.competitive{border-color:#3b82f6;box-shadow:0 4px 24px rgba(59,130,246,.15)}
+.est-card.budget{border-color:var(--success);box-shadow:0 4px 24px rgba(22,163,74,.15)}
+.est-card-body{padding:16px 20px;flex:1;display:flex;flex-direction:column;gap:0}
+.est-line{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px}
+.est-line:last-child{border-bottom:none}
+.est-line-label{color:var(--text2);display:flex;align-items:center;gap:6px}
+.est-line-label i{font-size:14px;color:var(--text3)}
+.est-line-val{font-weight:600;color:var(--text)}
+.est-card-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--bg)}
+.est-margin-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.est-highlight{animation:estFadeIn .6s ease both}
+.est-card.recommended{position:relative}
+.est-card.recommended::after{content:'⭐ RECOMMENDED';position:absolute;top:12px;right:12px;background:var(--gold);color:var(--navy);font-size:9px;font-weight:800;padding:3px 8px;border-radius:20px;letter-spacing:.06em}
