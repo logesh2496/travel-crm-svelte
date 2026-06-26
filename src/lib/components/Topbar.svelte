@@ -29,7 +29,7 @@
 </script>
 
 <div class="topbar">
-  <span class="tb-title" id="tbTitle">{TITLES[title] || title}</span>
+  <!-- <span class="tb-title" id="tbTitle">{TITLES[title] || title}</span> -->
   <div class="tb-actions">
     <button class="btn btn-gold btn-sm" onclick={() => onAction('new-query')} type="button">
       <i class="ti ti-plus"></i>New Query

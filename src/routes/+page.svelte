@@ -4,12 +4,11 @@
   import { createFollowup } from '$lib/firebase/followup.db';
   import Login from '$lib/components/Login.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
-  import Topbar from '$lib/components/Topbar.svelte';
   import Chat from '$lib/components/Chat.svelte';
   import Modals from '$lib/components/Modals.svelte';
   import Dashboard from '$lib/components/pages/Dashboard.svelte';
   import QueriesPage from '$lib/components/pages/QueriesPage.svelte';
-  import EstimationPage from '$lib/components/pages/EstimationPage.svelte';
+  import ItineraryBuilder from '$lib/components/pages/ItineraryBuilder.svelte';
   import OtherPages from '$lib/components/pages/OtherPages.svelte';
 
   // App state
@@ -172,11 +171,6 @@
         onLogout={handleLogout} 
       />
       <div class="main">
-        <Topbar 
-          title={activePage} 
-          user={currentUser} 
-          onAction={handleAction} 
-        />
         
         {#if activePage === 'dashboard'}
           <Dashboard />
@@ -187,9 +181,10 @@
             onOpenModal={(id) => openModalId = id} 
             onAction={handleAction} 
           />
-        {:else if activePage === 'estimation'}
-          <EstimationPage 
+        {:else if activePage === 'itineraries'}
+          <ItineraryBuilder 
             leads={leads} 
+            onNavigate={handleNavigate}
             onAction={handleAction} 
           />
         {:else}

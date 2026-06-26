@@ -133,6 +133,7 @@
 </script>
 
 <div class="page active" id="page-dashboard">
+  <div class="ph"><h2>Dashboard</h2></div>
   {#if loading}
     <div style="padding: 24px; text-align: center; color: var(--gray-500);">
       Loading dashboard...

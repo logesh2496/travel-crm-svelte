@@ -10,9 +10,7 @@
     { label: 'Main', type: 'label', section: 'Main' },
     { label: 'Dashboard', id: 'dashboard', icon: 'ti-layout-dashboard', section: 'Main' },
     { label: 'Query/Lead Management', id: 'queries', icon: 'ti-search', badge: 12, section: 'Main' },
-    { label: 'Quotation Management', id: 'quotations', icon: 'ti-file-text', section: 'Main' },
     { label: 'Itinerary Builder', id: 'itineraries', icon: 'ti-map-route', section: 'Main' },
-    { label: 'Estimation Builder', id: 'estimation', icon: 'ti-calculator', section: 'Main' },
     { label: 'Booking Management', id: 'bookings', icon: 'ti-briefcase', section: 'Main' },
     { label: 'Follow-Ups', id: 'followups', icon: 'ti-calendar-event', badge: 5, section: 'Main' },
     
