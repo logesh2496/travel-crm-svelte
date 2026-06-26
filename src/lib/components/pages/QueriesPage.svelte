@@ -59,7 +59,7 @@
 
 <div class="page active" id="page-queries">
   <div class="ph">
-    <h2>Query / Lead Management</h2>
+    <h2>Lead Management</h2>
     <div class="ph-actions">
       <button class="btn btn-sm" class:btn-primary={viewMode === 'table'} onclick={() => viewMode = 'table'} type="button">
         <i class="ti ti-table"></i>Table
@@ -88,7 +88,7 @@
   </div>
 
   <div class="sbar">
-    <input placeholder="Search by name, phone, destination, query ID…" style="min-width:300px">
+    <input placeholder="Search by name, phone, destination, query ID…" style="flex: 1; min-width: 200px; max-width: 300px;">
     <select>
       <option>All Sources</option><option>Website</option><option>WhatsApp</option>
       <option>Facebook</option><option>Instagram</option><option>Referral</option>
@@ -108,8 +108,8 @@
 
   {#if viewMode === 'table'}
     <!-- TABLE VIEW -->
-    <div id="queryTableView" class="table-wrap">
-      <table>
+    <div id="queryTableView" class="table-wrap" style="width: 100%; overflow-x: auto;">
+      <table style="min-width: 1200px;">
         <thead>
           <tr>
             <th>Query ID</th>
