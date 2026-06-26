@@ -117,26 +117,29 @@
     <h2>Connect Your Facebook Page</h2>
   </div>
 
-  <div class="card p-lg mb-lg" style="display: flex; gap: 2rem; align-items: center;">
-    <div style="flex: 1;">
-      <h3 class="mb-sm">Link your Facebook Page for Auto leads</h3>
-      <p class="text-secondary mb-md">
-        Easily link your Facebook or Instagram Page to our CRM system and start receiving leads generated through Instant Form Ads directly into your CRM dashboard. This eliminates manual work and ensures you never miss a lead.
-      </p>
-      
-      <button class="btn btn-primary" onclick={linkWithFacebook}>
-        <i class="ti ti-brand-facebook"></i> Link with Facebook
-      </button>
-
-      <div class="mt-md text-sm text-secondary" style="background: var(--bg-alt); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--primary);">
-        After logging into Facebook, your page name will appear below. Once linked, Facebook lead forms will be automatically created in the system.
+  <div class="card p-lg mb-lg">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 800px;">
+      <div>
+        <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="ti ti-brand-facebook" style="color: #1877F2; font-size: 1.5rem;"></i>
+          Link your Facebook Page for Auto Leads
+        </h3>
+        <p class="text-secondary" style="line-height: 1.6; margin: 0;">
+          Easily connect your Facebook or Instagram Page to our CRM system. Start receiving leads generated through Instant Form Ads directly into your dashboard. This eliminates manual work and ensures you never miss a lead.
+        </p>
       </div>
-    </div>
-    
-    <div style="flex: 1; text-align: center;">
-      <!-- Placeholder for the illustration shown in the screenshot -->
-      <div style="width: 100%; height: 250px; background: #eef2f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--primary);">
-        <i class="ti ti-magnet" style="font-size: 8rem; opacity: 0.2;"></i>
+      
+      <div>
+        <button class="btn btn-primary" onclick={linkWithFacebook} style="padding: 0.5rem 1.25rem; font-weight: 500;">
+          <i class="ti ti-plug"></i> Connect Meta Account
+        </button>
+      </div>
+
+      <div class="text-sm text-secondary" style="background: var(--bg-alt); padding: 1.25rem; border-radius: 8px; border-left: 4px solid var(--primary); display: flex; gap: 0.75rem; align-items: flex-start;">
+        <i class="ti ti-info-circle text-primary" style="font-size: 1.25rem; flex-shrink: 0; margin-top: 2px;"></i>
+        <div style="line-height: 1.5;">
+          After logging into Facebook, your page name will appear below. Once linked, any new leads from your connected pages will automatically flow into the CRM.
+        </div>
       </div>
     </div>
   </div>
