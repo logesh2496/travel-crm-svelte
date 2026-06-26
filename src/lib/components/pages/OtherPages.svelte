@@ -415,17 +415,5 @@
 {:else if activePage === 'users'}
   <UsersManagement />
 
-{:else if activePage === 'settings'}
-  <div class="page active" id="page-settings">
-    <div class="ph"><h2>Settings</h2><button class="btn btn-primary btn-sm" onclick={() => onAction('toast', { msg: 'Settings saved!', type: 'success' })} type="button"><i class="ti ti-device-floppy"></i>Save All</button></div>
-    <div class="g2" style="margin-top: 14px;">
-      <div class="card">
-        <div class="card-title"><i class="ti ti-building"></i>Agency Configuration</div>
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div class="fg"><label for="aname">Agency Name</label><input id="aname" value="TravelCRM Pro Agency"></div>
-          <div class="fg"><label for="agst">GST / Tax Number</label><input id="agst" value="27AABCT1234F1Z5"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+
 {/if}

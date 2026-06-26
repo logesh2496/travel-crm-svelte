@@ -10,6 +10,7 @@
   import QueriesPage from '$lib/components/pages/QueriesPage.svelte';
   import ItineraryBuilder from '$lib/components/pages/ItineraryBuilder.svelte';
   import OtherPages from '$lib/components/pages/OtherPages.svelte';
+  import Settings from '$lib/components/pages/Settings.svelte';
 
   // App state
   let isLoggedIn = $state(false);
@@ -186,6 +187,11 @@
             leads={leads} 
             onNavigate={handleNavigate}
             onAction={handleAction} 
+          />
+        {:else if activePage === 'settings'}
+          <Settings 
+            user={currentUser}
+            onAction={handleAction}
           />
         {:else}
           <OtherPages 
