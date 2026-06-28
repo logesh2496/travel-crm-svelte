@@ -201,6 +201,7 @@
             onNavigate={handleNavigate} 
             onOpenModal={(id) => openModalId = id} 
             onAction={handleAction} 
+            user={currentUser}
           />
         {/if}
       </div>

@@ -5,15 +5,19 @@
   import PaymentManagement from './PaymentManagement.svelte';
   import SupplierPayments from './SupplierPayments.svelte';
   import UsersManagement from './UsersManagement.svelte';
+  import MastersPage from './MastersPage.svelte';
+  import SuppliersManagement from './SuppliersManagement.svelte';
+  import ClientCommunication from './ClientCommunication.svelte';
   import type { Lead } from '$lib/firebase/lead.db';
 
-  let { activePage, pageData, leads = [], onNavigate, onOpenModal, onAction } = $props<{
+  let { activePage, pageData, leads = [], onNavigate, onOpenModal, onAction, user } = $props<{
     activePage: string;
     pageData?: any;
     leads?: Lead[];
     onNavigate: (page: string, data?: any) => void;
     onOpenModal: (modalId: string) => void;
     onAction: (actionName: string, data?: any) => void;
+    user?: any;
   }>();
 
   // Communication Page States
@@ -156,9 +160,6 @@
     };
   });
 
-  // Masters Tab
-  let activeMasterTab = $state('dest');
-
   // B2B Tab
   let activeBizTab = $state('b2b');
 </script>
@@ -244,128 +245,13 @@
   </div>
 
 {:else if activePage === 'suppliers'}
-  <div class="page active" id="page-suppliers">
-    <div class="ph"><h2>Supplier Management</h2></div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Supplier</th><th>Type</th><th>Location</th><th>Contact</th><th>Bank Details</th><th>Total Business</th><th>Pending</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><div class="td-strong">Anantara Hotels & Resorts</div></td>
-            <td><span class="badge b-teal">Hotel</span></td>
-            <td>Maldives</td>
-            <td>reservations@anantara.com</td>
-            <td>HDFC ···4521</td>
-            <td class="td-strong">₹12.4L</td>
-            <td style="color:var(--danger)">₹1,20,000</td>
-            <td><span class="badge b-green">Active</span></td>
-            <td><button class="icon-btn" onclick={() => onAction('toast', { msg: 'Emailed supplier!', type: 'success' })} type="button"><i class="ti ti-mail"></i></button></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <SuppliersManagement />
 
 {:else if activePage === 'masters'}
-  <div class="page active" id="page-masters">
-    <div class="ph"><h2>Master Management</h2></div>
-    <div class="tabs">
-      <button class="tab" class:active={activeMasterTab === 'dest'} onclick={() => activeMasterTab = 'dest'} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">Destinations</button>
-      <button class="tab" class:active={activeMasterTab === 'hotel'} onclick={() => activeMasterTab = 'hotel'} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">Hotels & Tariff</button>
-      <button class="tab" class:active={activeMasterTab === 'currency'} onclick={() => activeMasterTab = 'currency'} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">Currency / ROE</button>
-    </div>
-    
-    {#if activeMasterTab === 'dest'}
-      <div id="master-dest">
-        <div class="g3" style="margin-top: 14px;">
-          <div class="card card-sm" style="display:flex;align-items:center;gap:12px"><div style="font-size:28px">🏝</div><div><div style="font-weight:700">Maldives</div><div style="font-size:12px;color:var(--text2)">Indian Ocean · 24 packages</div></div></div>
-          <div class="card card-sm" style="display:flex;align-items:center;gap:12px"><div style="font-size:28px">🇦🇪</div><div><div style="font-weight:700">Dubai, UAE</div><div style="font-size:12px;color:var(--text2)">Middle East · 18 packages</div></div></div>
-        </div>
-      </div>
-    {:else if activeMasterTab === 'hotel'}
-      <div id="master-hotel">
-        <table class="cost-table" style="margin-top: 14px; width: 100%;">
-          <thead>
-            <tr><th>Hotel Name</th><th>Destination</th><th>Category</th><th>Base Tariff</th></tr>
-          </thead>
-          <tbody>
-            <tr><td class="td-strong">Anantara Kihavah</td><td>Maldives</td><td><span class="badge b-gold">5-Star Luxury</span></td><td>₹38,000/night</td></tr>
-          </tbody>
-        </table>
-      </div>
-    {:else if activeMasterTab === 'currency'}
-      <div id="master-currency" style="margin-top: 14px;">
-        <div class="g3">
-          <div class="card card-sm"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:700">USD → INR</div><div style="font-size:11px;color:var(--text2)">US Dollar</div></div><div style="font-size:22px;font-weight:700;color:var(--teal)">83.42</div></div></div>
-          <div class="card card-sm"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:700">AED → INR</div><div style="font-size:11px;color:var(--text2)">UAE Dirham</div></div><div style="font-size:22px;font-weight:700;color:var(--teal)">22.71</div></div></div>
-        </div>
-      </div>
-    {/if}
-  </div>
+  <MastersPage />
 
 {:else if activePage === 'communication'}
-  <div class="page active" id="page-communication">
-    <div class="ph"><h2>Client Communication</h2></div>
-    <div class="tabs">
-      <button class="tab" class:active={activeCommTab === 'email'} onclick={() => activeCommTab = 'email'} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">Email</button>
-      <button class="tab" class:active={activeCommTab === 'whatsapp'} onclick={() => activeCommTab = 'whatsapp'} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">WhatsApp</button>
-    </div>
-    
-    {#if activeCommTab === 'email'}
-      <div id="comm-email" style="margin-top: 14px;">
-        <div class="g21">
-          <div class="card">
-            <div class="card-title"><i class="ti ti-mail"></i>Compose Email</div>
-            <div style="display:flex;flex-direction:column;gap:12px">
-              <div class="fg"><label for="eto">To</label><input id="eto" value="priya.sharma@email.com"></div>
-              <div class="fg">
-                <label for="emailTpl">Template</label>
-                <select id="emailTpl" bind:value={emailTpl}>
-                  <option value="quote">Quotation Email</option>
-                  <option value="confirm">Booking Confirmation</option>
-                  <option value="reminder">Payment Reminder</option>
-                  <option value="travel">Travel Reminder</option>
-                </select>
-              </div>
-              <div class="fg"><label for="emailSubj">Subject</label><input id="emailSubj" bind:value={emailSubj}></div>
-              <div class="fg"><label for="emailBody">Message</label><textarea id="emailBody" rows="9" bind:value={emailBody}></textarea></div>
-              <div><button class="btn btn-primary btn-sm" onclick={() => onAction('toast', { msg: 'Email sent successfully!', type: 'success' })} type="button"><i class="ti ti-send"></i>Send Email</button></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    {:else}
-      <div id="comm-whatsapp" style="margin-top: 14px;">
-        <div class="g21">
-          <div class="card">
-            <div class="card-title"><i class="ti ti-brand-whatsapp" style="color:#25D366"></i>WhatsApp Web Integrated</div>
-            <div style="display:flex;flex-direction:column;gap:12px">
-              <div class="fg">
-                <label for="waTpl">Template</label>
-                <select id="waTpl" bind:value={waTpl}>
-                  <option value="q">Send Quotation</option>
-                  <option value="f">Follow-Up</option>
-                  <option value="p">Payment Reminder</option>
-                  <option value="c">Booking Confirmation</option>
-                  <option value="t">Travel Reminder</option>
-                </select>
-              </div>
-              <div class="fg"><label for="waMsg">Message</label><textarea id="waMsg" rows="7" bind:value={waMsg}></textarea></div>
-              <div><button class="btn btn-wa btn-sm" onclick={() => onAction('toast', { msg: 'Message sent via WhatsApp!', type: 'success' })} type="button"><i class="ti ti-send"></i>Send Now</button></div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title"><i class="ti ti-device-mobile"></i>Preview</div>
-            <div style="background:#e5ddd5;border-radius:var(--radius-lg);padding:16px">
-              <div style="background:#fff;border-radius:12px 12px 12px 0;padding:12px;font-size:13px;line-height:1.6;box-shadow:0 1px 2px rgba(0,0,0,.1)">
-                {@html waMsg.replace(/\n/g, '<br>')}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    {/if}
-  </div>
+  <ClientCommunication {user} {onAction} />
 
 {:else if activePage === 'reports'}
   <div class="page active" id="page-reports">
