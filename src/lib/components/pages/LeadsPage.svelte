@@ -68,7 +68,7 @@
         <i class="ti ti-layout-kanban"></i>Kanban
       </button>
       <button class="btn btn-primary btn-sm" onclick={() => onOpenModal('addQueryModal')} type="button">
-        <i class="ti ti-plus"></i>New Query
+        <i class="ti ti-plus"></i>New Lead
       </button>
     </div>
   </div>
@@ -88,7 +88,7 @@
   </div>
 
   <div class="sbar">
-    <input placeholder="Search by name, phone, destination, query ID…" style="flex: 1; min-width: 200px; max-width: 300px;">
+    <input placeholder="Search by name, phone, destination, lead ID…" style="flex: 1; min-width: 200px; max-width: 300px;">
     <select>
       <option>All Sources</option><option>Website</option><option>WhatsApp</option>
       <option>Facebook</option><option>Instagram</option><option>Referral</option>
@@ -112,7 +112,7 @@
       <table style="min-width: 1200px;">
         <thead>
           <tr>
-            <th>Query ID</th>
+            <th>Lead ID</th>
             <th>Customer</th>
             <th>Phone</th>
             <th>Destination</th>
@@ -128,9 +128,9 @@
         </thead>
         <tbody>
           {#each filteredLeads as q}
-            {#if editingRowId === q.id}
+            {#if editingRowId === q.leadId}
             <tr>
-              <td style="font-family:monospace;font-size:12px;color:var(--text2)">{q.id || 'TEMP'}</td>
+              <td style="font-family:monospace;font-size:12px;color:var(--text2)">{q.leadId || 'TEMP'}</td>
               <td>
                 <input bind:value={editForm.name} style="width: 100px; font-size: 12px; padding: 2px" />
                 <input bind:value={editForm.phone} style="width: 100px; font-size: 12px; padding: 2px; margin-top: 2px" />
@@ -178,7 +178,7 @@
             </tr>
             {:else}
             <tr>
-              <td style="font-family:monospace;font-size:12px;color:var(--text2)">{q.id || 'TEMP'}</td>
+              <td style="font-family:monospace;font-size:12px;color:var(--text2)">{q.leadId || 'TEMP'}</td>
               <td>
                 <div class="td-strong">{q.name}</div>
                 <div class="td-sub">{q.phone}</div>
@@ -192,7 +192,7 @@
               <td>
                 <select class="badge {PBADGE[q.pri] || 'b-gray'}" style="font-size:10px; border:none; outline:none; cursor:pointer;" 
                   value={q.pri} 
-                  onchange={(e) => onAction('update-lead', { id: q.id, pri: e.target.value })}>
+                  onchange={(e) => onAction('update-lead', { id: q.leadId, pri: e.target.value })}>
                   <option value="Urgent" style="background:#fff;color:#000">Urgent</option>
                   <option value="High" style="background:#fff;color:#000">High</option>
                   <option value="Normal" style="background:#fff;color:#000">Normal</option>
@@ -200,9 +200,9 @@
                 </select>
               </td>
               <td>
-                <select class="badge {SBADGE[q.status] || 'b-gray'}" style="border:none; outline:none; cursor:pointer;" 
+                <select class="badge {SBADGE[q.status] || 'b-gray'}" style="border:none; outline:none; cursor:pointer; appearance:auto; -webkit-appearance:auto; padding-right:1rem;" 
                   value={q.status} 
-                  onchange={(e) => onAction('update-lead', { id: q.id, status: e.target.value })}>
+                  onchange={(e) => onAction('update-lead', { id: q.leadId, status: e.target.value })}>
                   <option value="New" style="background:#fff;color:#000">New</option>
                   <option value="Contacted" style="background:#fff;color:#000">Contacted</option>
                   <option value="Quote Sent" style="background:#fff;color:#000">Quote Sent</option>
@@ -222,10 +222,10 @@
                   <button class="icon-btn" title="View" onclick={() => viewLead = q} type="button">
                     <i class="ti ti-eye"></i>
                   </button>
-                  <button class="icon-btn" title="Edit" onclick={() => { editingRowId = q.id || null; editForm = { ...q }; }} type="button">
+                  <button class="icon-btn" title="Edit" onclick={() => { editingRowId = q.leadId || null; editForm = { ...q }; }} type="button">
                     <i class="ti ti-edit"></i>
                   </button>
-                  <button class="icon-btn" title="Quote" onclick={() => onNavigate('quotations', { leadId: q.id })} type="button">
+                  <button class="icon-btn" title="Quote" onclick={() => onNavigate('itineraries', { leadId: q.leadId })} type="button">
                     <i class="ti ti-file-text"></i>
                   </button>
                   <button class="icon-btn" title="WA" 
@@ -239,7 +239,7 @@
                     <i class="ti ti-brand-whatsapp"></i>
                   </button>
                   {#if q.status !== 'Confirmed'}
-                  <button class="icon-btn" title="Confirm" onclick={() => onAction('update-lead', { id: q.id, status: 'Confirmed' })} type="button">
+                  <button class="icon-btn" title="Confirm" onclick={() => onAction('update-lead', { id: q.leadId, status: 'Confirmed' })} type="button">
                     <i class="ti ti-circle-check" style="color:var(--success)"></i>
                   </button>
                   {/if}
@@ -281,7 +281,7 @@
 {#if viewLead}
 <div class="modal-overlay open" onclick={(e) => e.target === e.currentTarget && (viewLead = null)} role="dialog">
   <div class="modal modal-lg">
-    <div class="modal-title"><i class="ti ti-eye"></i>View Query / Lead</div>
+    <div class="modal-title"><i class="ti ti-eye"></i>View Lead</div>
     <div class="fgrid">
       <div class="fg"><label>Customer Name</label><div>{viewLead.name}</div></div>
       <div class="fg"><label>Mobile Number</label><div>{viewLead.phone}</div></div>
@@ -295,7 +295,7 @@
       <div class="fg full"><label>Notes</label><div>{viewLead.notes || 'No special requirements noted.'}</div></div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-teal" onclick={() => { const qId = viewLead?.id; viewLead = null; onNavigate('quotations', { leadId: qId }); }} type="button"><i class="ti ti-file-text"></i>Create Quote</button>
+      <button class="btn btn-teal" onclick={() => { const qId = viewLead?.leadId; viewLead = null; onNavigate('itineraries', { leadId: qId }); }} type="button"><i class="ti ti-file-text"></i>Create Quote</button>
       <button class="btn" onclick={() => viewLead = null} type="button">Close</button>
     </div>
   </div>

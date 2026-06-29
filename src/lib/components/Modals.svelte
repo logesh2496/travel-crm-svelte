@@ -109,7 +109,7 @@
 <!-- Add Query Modal -->
 <div class="modal-overlay" class:open={openModalId === 'addQueryModal'} onclick={(e) => e.target === e.currentTarget && onClose()} role="dialog">
   <div class="modal modal-lg">
-    <div class="modal-title"><i class="ti ti-user-plus"></i>New Query / Lead</div>
+    <div class="modal-title"><i class="ti ti-user-plus"></i>New Lead</div>
     <div class="fgrid">
       <div class="fg"><label for="qName">Customer Name *</label><input id="qName" bind:value={qName} placeholder="Full name"></div>
       <div class="fg"><label for="qPhone">Mobile Number *</label><input id="qPhone" bind:value={qPhone} placeholder="+91 9876543210"></div>
@@ -144,7 +144,7 @@
       <div class="fg full"><label for="qNotes">Special Requirements / Notes</label><textarea id="qNotes" bind:value={qNotes} placeholder="Any special needs, preferences…"></textarea></div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-primary" onclick={() => handleSaveQuery('save')} type="button"><i class="ti ti-device-floppy"></i>Save Query</button>
+      <button class="btn btn-primary" onclick={() => handleSaveQuery('save')} type="button"><i class="ti ti-device-floppy"></i>Save Lead</button>
       <button class="btn btn-teal" onclick={() => handleSaveQuery('save-quote')} type="button"><i class="ti ti-file-text"></i>Save & Create Quote</button>
       <button class="btn" onclick={onClose} type="button">Cancel</button>
     </div>
@@ -157,11 +157,11 @@
     <div class="modal-title"><i class="ti ti-calendar-event"></i>Schedule Follow-Up</div>
     <div class="fgrid">
       <div class="fg full">
-        <label for="fuLead">Query / Customer</label>
+        <label for="fuLead">Lead / Customer</label>
         <select id="fuLead" bind:value={fuLead}>
           <option value="" disabled selected>Select a lead</option>
           {#each leads as lead}
-            <option value="{lead.id} — {lead.name}">{lead.id} — {lead.name}</option>
+            <option value="{lead.leadId} — {lead.name}">{lead.leadId} — {lead.name}</option>
           {/each}
         </select>
       </div>

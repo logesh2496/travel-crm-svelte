@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Travel CRM</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 2.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        h2 {
+            margin-top: 2rem;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Privacy Policy</h1>
+        <p><strong>Last Updated:</strong> <span id="date"></span></p>
+
+        <p>Welcome to our Travel CRM ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy governs the privacy policies and practices of our Customer Relationship Management (CRM) platform, particularly regarding our integration with Facebook and Meta services.</p>
+
+        <h2>1. Information We Collect</h2>
+        <p>When you use our CRM and connect it to your Facebook or Meta services, we may collect the following information:</p>
+        <ul>
+            <li><strong>Facebook Lead Ads Data:</strong> Information submitted by users through Facebook Instant Forms (such as name, email address, phone number, and any custom questions asked).</li>
+            <li><strong>Page Information:</strong> Your Facebook Page ID, Page Name, and access tokens required to retrieve leads on your behalf.</li>
+            <li><strong>Account Details:</strong> Basic profile information necessary to facilitate the connection between your Facebook account and our CRM.</li>
+        </ul>
+
+        <h2>2. How We Use Your Information</h2>
+        <p>The information we collect via the Facebook integration is used strictly for the following purposes:</p>
+        <ul>
+            <li><strong>Lead Management:</strong> To automatically import leads generated from your Facebook Instant Form Ads into your CRM dashboard.</li>
+            <li><strong>Communication:</strong> To allow you (the travel agency/user) to contact and manage inquiries from potential clients.</li>
+            <li><strong>Service Improvement:</strong> To maintain and improve the reliability of our automated lead synchronization.</li>
+        </ul>
+        <p><em>Note: We do not sell, rent, or share the lead data collected through Facebook with any third parties. The data is solely accessible by the authorized CRM account holder.</em></p>
+
+        <h2>3. Facebook API Scopes Used</h2>
+        <p>To provide our services, our application requests the following permissions from Facebook:</p>
+        <ul>
+            <li><code>pages_show_list</code>: To display the list of pages you manage so you can select which one to connect.</li>
+            <li><code>pages_read_engagement</code>: To verify page connections and status.</li>
+            <li><code>leads_retrieval</code>: To automatically fetch new leads submitted to your connected Facebook Pages.</li>
+        </ul>
+
+        <h2>4. Data Retention and Deletion</h2>
+        <p>We retain your connected Facebook Page tokens and associated lead data only as long as your account is active and the integration is enabled.</p>
+        <p><strong>Data Deletion Instructions:</strong> You have the right to request the deletion of your data. To remove your data or disconnect your Facebook page:</p>
+        <ol>
+            <li>Log into your CRM dashboard.</li>
+            <li>Navigate to the <strong>Facebook Settings</strong> or <strong>Integrations</strong> page.</li>
+            <li>Click the "Unlink" or "Disconnect" button next to your connected page.</li>
+            <li>Upon unlinking, we will immediately revoke our access tokens and stop fetching new leads.</li>
+        </ol>
+        <p>If you wish to completely delete your account and all associated lead data from our servers, please contact us directly using the information below.</p>
+
+        <h2>5. Security</h2>
+        <p>We implement appropriate technical and organizational security measures to protect your personal data and Facebook tokens against unauthorized access, alteration, disclosure, or destruction. However, please remember that no method of transmission over the internet or electronic storage is 100% secure.</p>
+
+        <h2>6. Changes to This Privacy Policy</h2>
+        <p>We may update this Privacy Policy from time to time. The updated version will be indicated by an updated "Last Updated" date and the updated version will be effective as soon as it is accessible. We encourage you to review this Privacy Policy frequently to be informed of how we are protecting your information.</p>
+
+        <h2>7. Contact Us</h2>
+        <p>If you have questions or comments about this policy, you may email us at: <a href="mailto:support@yourtravelcrm.com">support@yourtravelcrm.com</a> <em>(Please update this with your actual support email)</em>.</p>
+    </div>
+    
+    <script>
+        document.getElementById('date').innerText = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    </script>
+</body>
+</html>

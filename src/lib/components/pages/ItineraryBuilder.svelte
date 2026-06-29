@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import type { Lead } from '$lib/firebase/lead.db';
-  import { createItinerary } from '$lib/firebase/itinerary.db';
+  import { createItinerary, fetchItineraryByLeadId } from '$lib/firebase/itinerary.db';
   import { createPackage, fetchPackages, type PackageTemplate } from '$lib/firebase/package.db';
 
   let { leads = [], onNavigate, onAction } = $props<{
@@ -12,36 +12,101 @@
 
   // --- Lead & Trip State ---
   let selectedLeadId = $state('');
-  let itinTitle = $state('Maldives Luxury Escape — 5N/6D');
-  let itinDest = $state('Maldives');
-  let istart = $state('2024-07-15');
-  let iend = $state('2024-07-21');
-  let iadults = $state(2);
-  let ichildren = $state(1);
-  let itheme = $state('Where the ocean meets the sky — a luxury escape tailored just for you');
+  let currentItineraryId = $state<string | undefined>(undefined);
+  let itinTitle = $state('');
+  let itinDest = $state('');
+  let istart = $state('');
+  let iend = $state('');
+  let iadults = $state(1);
+  let ichildren = $state(0);
+  let itheme = $state('');
 
-  let currentLead = $derived(leads.find((l: Lead) => l.id === selectedLeadId));
+  let currentLead = $derived(leads.find((l: Lead) => l.leadId === selectedLeadId));
 
   $effect(() => {
     if (currentLead) {
-      itinDest = currentLead.dest;
-      istart = currentLead.date;
-      // Derive duration from lead if possible, or set a default end date
+      loadItineraryForLead(currentLead.leadId);
     }
   });
 
+  async function loadItineraryForLead(leadId: string) {
+    try {
+      const existingItin = await fetchItineraryByLeadId(leadId);
+      if (existingItin) {
+        untrack(() => {
+          currentItineraryId = existingItin.id;
+          itinTitle = existingItin.title || '';
+          itinDest = existingItin.destination || '';
+          istart = existingItin.startDate || '';
+          iend = existingItin.endDate || '';
+          iadults = existingItin.adults || 1;
+          ichildren = existingItin.children || 0;
+          itheme = existingItin.theme || '';
+          itinDays = existingItin.days ? existingItin.days.map(d => ({title: d.title, activities: [...d.activities]})) : [];
+          customChipInputs = itinDays.map(() => '');
+          if (existingItin.costing) {
+            profitMarginPct = existingItin.costing.profitMarginPct ?? 15;
+            gstPct = existingItin.costing.gstPct ?? 5;
+            discount = existingItin.costing.discount ?? 0;
+          }
+        });
+      } else {
+        untrack(() => {
+          currentItineraryId = undefined;
+          itinTitle = currentLead?.dest ? `${currentLead.dest} Trip` : '';
+          itinDest = currentLead?.dest || '';
+          istart = currentLead?.date || '';
+          
+          if (currentLead?.date) {
+            const d = new Date(currentLead.date);
+            if (!isNaN(d.getTime())) {
+              d.setDate(d.getDate() + 5);
+              iend = d.toISOString().split('T')[0];
+            }
+          }
+          iadults = 2;
+          ichildren = 0;
+          itheme = '';
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   // --- Itinerary State ---
-  let itinDays = $state<{ title: string; activities: string[] }[]>([
-    { title: 'Day 1 — Arrival & Check-in', activities: ['Malé International Airport', 'Seaplane to Baa Atoll', 'Overwater villa check-in', 'Welcome dinner'] },
-    { title: 'Day 2 — Marine Adventures', activities: ['Manta ray snorkelling at Hanifaru Bay', 'Glass-bottom kayaking', 'Sunset cruise'] },
-    { title: 'Day 3 — Leisure & Spa', activities: ['Overwater spa treatment', 'Private beach dining', 'Stargazing'] },
-    { title: 'Day 4 — Island Culture', activities: ['Malé city tour', 'Local market visit', 'Cultural show'] },
-    { title: 'Day 5 — Last Splash', activities: ['Water sports', 'Farewell dinner', 'Bonfire on beach'] },
-    { title: 'Day 6 — Departure', activities: ['Seaplane to Malé', 'International departure'] }
-  ]);
+  let itinDays = $state<{ title: string; activities: string[] }[]>([]);
 
   const PREDEFINED_CHIPS = ['Sightseeing', 'Leisure', 'Beach', 'Spa', 'Transfer', 'Breakfast', 'Lunch', 'Dinner', 'City Tour'];
-  let customChipInputs = $state<string[]>(['', '', '', '', '', '']);
+  let customChipInputs = $state<string[]>([]);
+
+  $effect(() => {
+    if (istart && iend) {
+      const start = new Date(istart);
+      const end = new Date(iend);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end >= start) {
+        const utcStart = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+        const utcEnd = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+        const targetDays = Math.round((utcEnd - utcStart) / (1000 * 60 * 60 * 24)) + 1;
+        
+        untrack(() => {
+          if (targetDays > itinDays.length) {
+            const daysToAdd = targetDays - itinDays.length;
+            for (let i = 0; i < daysToAdd; i++) {
+              itinDays.push({
+                title: `Day ${itinDays.length + 1} — Title`,
+                activities: []
+              });
+              customChipInputs.push('');
+            }
+          } else if (targetDays < itinDays.length && targetDays > 0) {
+            itinDays = itinDays.slice(0, targetDays);
+            customChipInputs = customChipInputs.slice(0, targetDays);
+          }
+        });
+      }
+    }
+  });
 
   let packages = $state<PackageTemplate[]>([]);
   let itinTemplate = $state('');
@@ -82,6 +147,7 @@
   async function saveItinerary() {
     try {
       const data = {
+        id: currentItineraryId,
         leadId: selectedLeadId,
         title: itinTitle,
         destination: itinDest,
@@ -93,29 +159,15 @@
         days: $state.snapshot(itinDays),
         costing: { baseCost, profitMarginPct, profitMarginAmt, gstPct, gstAmt, discount, finalCost }
       };
-      await createItinerary(data);
-      onAction('toast', { msg: 'Itinerary saved to Firestore!', type: 'success' });
+      const savedId = await createItinerary(data);
+      currentItineraryId = savedId;
+      onAction('toast', { msg: 'Itinerary saved!', type: 'success' });
     } catch (err) {
       onAction('toast', { msg: 'Failed to save itinerary', type: 'error' });
     }
   }
 
-  async function saveAsPackage() {
-    try {
-      const data = {
-        title: itinTitle,
-        destination: itinDest,
-        theme: itheme,
-        days: $state.snapshot(itinDays).map(d => ({ title: d.title, activities: d.activities })),
-        baseCostEstimate: baseCost
-      };
-      await createPackage(data);
-      onAction('toast', { msg: 'Package saved to Firestore!', type: 'success' });
-      packages = await fetchPackages();
-    } catch (err) {
-      onAction('toast', { msg: 'Failed to save package', type: 'error' });
-    }
-  }
+
 
   // --- Costing Engine ---
   // We use the days to determine nights.
@@ -176,39 +228,40 @@
 <div class="page active" id="page-itineraries">
   <div class="ph">
     <h2>Itinerary Builder</h2>
-    <div class="ph-actions">
-      <button class="btn {activeTab === 'builder' ? 'btn-primary' : 'btn-sm'}" onclick={() => activeTab = 'builder'} type="button"><i class="ti ti-map-2"></i>Build Itinerary</button>
-      <button class="btn {activeTab === 'costing' ? 'btn-primary' : 'btn-sm'}" onclick={() => activeTab = 'costing'} type="button"><i class="ti ti-calculator"></i>Costing Engine</button>
-      <button class="btn {activeTab === 'pdf' ? 'btn-teal' : 'btn-sm'}" onclick={() => activeTab = 'pdf'} type="button"><i class="ti ti-file-text"></i>PDF Preview</button>
-      <button class="btn btn-sm" onclick={saveItinerary} type="button"><i class="ti ti-device-floppy"></i>Save Itinerary</button>
-      <button class="btn btn-sm" onclick={saveAsPackage} type="button"><i class="ti ti-archive"></i>Save as Package</button>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+      <div><i class="ti ti-info-circle"></i>Trip Details</div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn {activeTab === 'builder' ? 'btn-primary' : 'btn-sm'}" onclick={() => activeTab = 'builder'} type="button"><i class="ti ti-map-2"></i>Build Itinerary</button>
+        <button class="btn {activeTab === 'costing' ? 'btn-primary' : 'btn-sm'}" onclick={() => activeTab = 'costing'} type="button"><i class="ti ti-calculator"></i>Costing Engine</button>
+        <button class="btn {activeTab === 'pdf' ? 'btn-teal' : 'btn-sm'}" onclick={() => activeTab = 'pdf'} type="button"><i class="ti ti-file-text"></i>PDF Preview</button>
+      </div>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 14px;">
+      <div class="fg" style="flex: 1 1 200px;">
+        <label for="ilead">Select Lead</label>
+        <select id="ilead" bind:value={selectedLeadId}>
+          <option value="">-- Manual Entry --</option>
+          {#each leads as lead}
+            <option value={lead.leadId}>{lead.name} ({lead.dest})</option>
+          {/each}
+        </select>
+      </div>
+      <div class="fg" style="flex: 1 1 180px;"><label for="ititle">Trip Title</label><input id="ititle" bind:value={itinTitle}></div>
+      <div class="fg" style="flex: 1 1 150px;"><label for="idest">Destination</label><input id="idest" bind:value={itinDest}></div>
+      <div class="fg" style="flex: 0 1 130px;"><label for="istart">Start Date</label><input type="date" id="istart" bind:value={istart}></div>
+      <div class="fg" style="flex: 0 1 130px;"><label for="iend">End Date</label><input type="date" id="iend" bind:value={iend}></div>
+      <div class="fg" style="flex: 0 1 80px;"><label for="iadults">Adults</label><input type="number" id="iadults" bind:value={iadults} min="1"></div>
+      <div class="fg" style="flex: 0 1 80px;"><label for="ichildren">Children</label><input type="number" id="ichildren" bind:value={ichildren} min="0"></div>
+      <div class="fg" style="flex: 1 1 100%;"><label for="itheme">Theme / Tag Line</label><input id="itheme" bind:value={itheme}></div>
     </div>
   </div>
 
   {#if activeTab === 'builder'}
     <div class="g21">
       <div>
-        <div class="card" style="margin-bottom:14px">
-          <div class="card-title"><i class="ti ti-info-circle"></i>Trip Details</div>
-          <div class="fgrid">
-            <div class="fg">
-              <label for="ilead">Select Lead</label>
-              <select id="ilead" bind:value={selectedLeadId}>
-                <option value="">-- Manual Entry --</option>
-                {#each leads as lead}
-                  <option value={lead.id}>{lead.name} ({lead.dest})</option>
-                {/each}
-              </select>
-            </div>
-            <div class="fg"><label for="ititle">Trip Title</label><input id="ititle" bind:value={itinTitle}></div>
-            <div class="fg"><label for="idest">Destination</label><input id="idest" bind:value={itinDest}></div>
-            <div class="fg"><label for="istart">Start Date</label><input type="date" id="istart" bind:value={istart}></div>
-            <div class="fg"><label for="iend">End Date</label><input type="date" id="iend" bind:value={iend}></div>
-            <div class="fg"><label for="iadults">Adults</label><input type="number" id="iadults" bind:value={iadults} min="1"></div>
-            <div class="fg"><label for="ichildren">Children</label><input type="number" id="ichildren" bind:value={ichildren} min="0"></div>
-            <div class="fg full"><label for="itheme">Theme / Tag Line</label><input id="itheme" bind:value={itheme}></div>
-          </div>
-        </div>
 
         <div id="itinDays">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
@@ -281,7 +334,10 @@
               {/each}
             {/if}
           </div>
-          <button class="btn btn-primary" style="width:100%; margin-top:12px" onclick={() => activeTab = 'costing'} type="button">Next: Costing Engine <i class="ti ti-arrow-right"></i></button>
+          <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <button class="btn btn-teal btn-sm" style="flex: 1;" onclick={saveItinerary} type="button"><i class="ti ti-device-floppy"></i>Save Itinerary</button>
+            <button class="btn btn-primary" style="flex: 1;" onclick={() => activeTab = 'costing'} type="button">Next: Costing Engine <i class="ti ti-arrow-right"></i></button>
+          </div>
         </div>
       </div>
     </div>
@@ -336,7 +392,10 @@
           <div style="font-size:36px; font-weight:800; color:var(--navy); margin-bottom:8px">₹{Math.round(finalCost).toLocaleString('en-IN')}</div>
           <div style="font-size:12px; color:var(--text2);">Total for {pax} Pax</div>
           
-          <button class="btn btn-teal" style="width:100%; margin-top:24px" onclick={() => activeTab = 'pdf'} type="button">Generate Customer PDF <i class="ti ti-file-text"></i></button>
+          <div style="display: flex; gap: 8px; margin-top: 24px;">
+            <button class="btn btn-teal btn-sm" style="flex: 1;" onclick={saveItinerary} type="button"><i class="ti ti-device-floppy"></i>Save Itinerary</button>
+            <button class="btn btn-primary" style="flex: 1;" onclick={() => activeTab = 'pdf'} type="button">Generate Customer PDF <i class="ti ti-file-text"></i></button>
+          </div>
         </div>
       </div>
     </div>
@@ -351,6 +410,7 @@
             <div style="font-size: 12px; color: var(--text2);">The customer will not see your itemized base costs or profit margin.</div>
           </div>
           <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary btn-sm" onclick={saveItinerary} type="button"><i class="ti ti-device-floppy"></i>Save Itinerary</button>
             <button class="btn btn-primary btn-sm" onclick={() => onAction('toast', { msg: 'PDF Downloaded!', type: 'success' })} type="button"><i class="ti ti-download"></i>Download PDF</button>
             <button class="btn btn-wa btn-sm" onclick={() => onAction('toast', { msg: 'Opening WhatsApp…', type: 'info' })} type="button"><i class="ti ti-brand-whatsapp"></i>Send via WhatsApp</button>
             <button class="btn btn-sm" onclick={() => onAction('toast', { msg: 'Emailed successfully!', type: 'success' })} type="button"><i class="ti ti-mail"></i>Email PDF</button>

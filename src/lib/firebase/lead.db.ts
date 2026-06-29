@@ -5,7 +5,7 @@ import { incrementDashboardKpi, incrementLeadSource, logActivity } from "./dashb
 const LEADS_COLLECTION = "leads";
 
 export interface Lead {
-  id?: string;
+  leadId?: string;
   name: string;
   phone: string;
   dest: string;
@@ -21,14 +21,14 @@ export interface Lead {
 export const fetchLeads = async (): Promise<Lead[]> => {
   const leadsCol = collection(db, LEADS_COLLECTION);
   const leadSnapshot = await getDocs(leadsCol);
-  return leadSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
+  return leadSnapshot.docs.map(doc => ({ leadId: doc.id, ...doc.data() } as Lead));
 };
 
 export const createLead = async (leadData: Lead): Promise<string> => {
-  if (leadData.id) {
-    const { id, ...data } = leadData;
-    await setDoc(doc(db, LEADS_COLLECTION, id), data);
-    return id;
+  if (leadData.leadId) {
+    const { leadId, ...data } = leadData;
+    await setDoc(doc(db, LEADS_COLLECTION, leadId), data);
+    return leadId;
   } else {
     const leadsCol = collection(db, LEADS_COLLECTION);
     const docRef = await addDoc(leadsCol, leadData);

@@ -1,4 +1,4 @@
-import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, updateDoc, query, where } from "firebase/firestore";
 import db from "./db";
 
 const ITINERARIES_COLLECTION = "itineraries";
@@ -34,6 +34,14 @@ export const fetchItineraries = async (): Promise<Itinerary[]> => {
   const col = collection(db, ITINERARIES_COLLECTION);
   const snapshot = await getDocs(col);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Itinerary));
+};
+
+export const fetchItineraryByLeadId = async (leadId: string): Promise<Itinerary | null> => {
+  const col = collection(db, ITINERARIES_COLLECTION);
+  const q = query(col, where("leadId", "==", leadId));
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) return null;
+  return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Itinerary;
 };
 
 export const createItinerary = async (data: Itinerary): Promise<string> => {

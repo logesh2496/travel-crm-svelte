@@ -66,12 +66,12 @@
   }
 
   function handleLeadSelect() {
-    const lead = leads.find(l => l.id === selectedLeadId);
+    const lead = leads.find(l => l.leadId === selectedLeadId);
     if (lead) {
       newBookingForm.customerName = lead.name;
       newBookingForm.customerPhone = lead.phone;
       newBookingForm.packageName = lead.dest; // Default to dest
-      newBookingForm.leadId = lead.id;
+      newBookingForm.leadId = lead.leadId;
     }
   }
 
@@ -207,7 +207,7 @@
           <select id="leadSelect" bind:value={selectedLeadId} onchange={handleLeadSelect}>
             <option value="">-- Select Lead --</option>
             {#each leads.filter(l => l.status === 'Confirmed') as lead}
-              <option value={lead.id}>{lead.name} ({lead.id}) - {lead.dest}</option>
+              <option value={lead.leadId}>{lead.name} ({lead.leadId}) - {lead.dest}</option>
             {/each}
           </select>
         </div>
