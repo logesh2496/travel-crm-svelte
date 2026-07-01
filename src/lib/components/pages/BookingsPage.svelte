@@ -15,7 +15,7 @@
   let newBookingDialog = $state<HTMLDialogElement>();
 
   let selectedBooking = $state<Booking | null>(null);
-  let statusFilter = $state<string>('Confirmed');
+  let statusFilter = $state<string>('All');
 
   let newBookingForm = $state<Partial<Booking>>({
     customerName: '',
@@ -71,6 +71,10 @@
       newBookingForm.customerName = lead.name;
       newBookingForm.customerPhone = lead.phone;
       newBookingForm.packageName = lead.dest; // Default to dest
+      newBookingForm.travelDates = lead.date || '';
+      if ('pax' in lead) {
+        newBookingForm.pax = (lead as any).pax;
+      }
       newBookingForm.leadId = lead.leadId;
     }
   }
@@ -206,7 +210,7 @@
           <label for="leadSelect">Select Lead (Query)</label>
           <select id="leadSelect" bind:value={selectedLeadId} onchange={handleLeadSelect}>
             <option value="">-- Select Lead --</option>
-            {#each leads.filter(l => l.status === 'Confirmed') as lead}
+            {#each leads.filter(l => l.status === 'Confirmed' && !bookings.some(b => b.leadId === l.leadId)) as lead}
               <option value={lead.leadId}>{lead.name} ({lead.leadId}) - {lead.dest}</option>
             {/each}
           </select>

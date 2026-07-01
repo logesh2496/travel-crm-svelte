@@ -9,7 +9,7 @@
   const navItems = [
     { label: 'Main', type: 'label', section: 'Main' },
     { label: 'Dashboard', id: 'dashboard', icon: 'ti-layout-dashboard', section: 'Main' },
-    { label: 'Lead Management', id: 'queries', icon: 'ti-search', badge: 12, section: 'Main' },
+    { label: 'Lead Management', id: 'leads', icon: 'ti-search', badge: 12, section: 'Main' },
     { label: 'Itinerary Builder', id: 'itineraries', icon: 'ti-map-route', section: 'Main' },
     { label: 'Booking Management', id: 'bookings', icon: 'ti-briefcase', section: 'Main' },
     { label: 'Follow-Ups', id: 'followups', icon: 'ti-calendar-event', badge: 5, section: 'Main' },
@@ -94,7 +94,7 @@
           <i class="ti {item.icon}"></i>
           <span style="flex-grow: 1;">{item.label}</span>
           <!-- {#if item.badge}
-            <span class="nav-badge" id={item.id === 'queries' ? 'nb-queries' : ''}>{item.badge}</span>
+            <span class="nav-badge" id={item.id === 'leads' ? 'nb-queries' : ''}>{item.badge}</span>
           {/if} -->
         </button>
       {/if}

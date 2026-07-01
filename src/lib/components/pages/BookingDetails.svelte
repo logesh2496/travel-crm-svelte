@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { updateBooking, type Booking } from '$lib/firebase/booking.db';
+  import { fetchItineraryByLeadId, type Itinerary } from '$lib/firebase/itinerary.db';
 
   let { booking, onClose, onAction } = $props<{
     booking: Booking;
@@ -10,8 +12,16 @@
   let activeTab = $state('overview');
   let isSaving = $state(false);
 
+  let itinerary = $state<Itinerary | null>(null);
+
   // Keep a local reactive copy to edit
   let currentBooking = $state<Booking>(JSON.parse(JSON.stringify(booking)));
+
+  onMount(async () => {
+    if (currentBooking.leadId) {
+      itinerary = await fetchItineraryByLeadId(currentBooking.leadId);
+    }
+  });
 
   // Ensure arrays exist
   if (!currentBooking.flights) currentBooking.flights = [];
@@ -134,14 +144,41 @@
         <div class="card p20">
           <h3>Payments Summary</h3>
           <div class="g2" style="margin-top: 15px;">
-            <div class="fg"><label>Total Amount</label><input type="number" bind:value={currentBooking.totalAmount} /></div>
+            <div class="fg">
+              <label>Final Selling Price (Cost Engine)</label>
+              <input type="number" value={itinerary?.costing?.finalCost || currentBooking.totalAmount} disabled />
+            </div>
             <div class="fg"><label>Paid Amount</label><input type="number" bind:value={currentBooking.paidAmount} /></div>
-            <div class="fg"><label>Balance Amount</label><input type="number" value={(currentBooking.totalAmount || 0) - (currentBooking.paidAmount || 0)} disabled /></div>
+            <div class="fg">
+              <label>Balance Amount</label>
+              <input type="number" value={(itinerary?.costing?.finalCost || currentBooking.totalAmount || 0) - (currentBooking.paidAmount || 0)} disabled />
+            </div>
           </div>
         </div>
       </div>
 
     {:else if activeTab === 'itinerary'}
+      <!-- Day-by-Day Itinerary -->
+      {#if itinerary && itinerary.days?.length > 0}
+        <div class="card p20 mb-4">
+          <h3>Day-by-Day Itinerary</h3>
+          <div class="list-container" style="margin-top: 15px;">
+            {#each itinerary.days as day, i}
+              <div class="item-row" style="flex-direction: column; gap: 8px; align-items: flex-start;">
+                <div style="font-weight: 600; font-size: 15px;">Day {i + 1}: {day.title}</div>
+                {#if day.activities?.length > 0}
+                  <ul style="margin: 0; padding-left: 20px; color: var(--text2); font-size: 14px;">
+                    {#each day.activities as act}
+                      <li>{act}</li>
+                    {/each}
+                  </ul>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
+
       <!-- Flights -->
       <div class="card p20 mb-4">
         <div class="flex-between">

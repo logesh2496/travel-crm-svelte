@@ -27,6 +27,12 @@ export interface Itinerary {
     gstAmt: number;
     discount: number;
     finalCost: number;
+    qF?: number;
+    qH?: number;
+    qT?: number;
+    qS?: number;
+    qI?: number;
+    manualOverride?: boolean;
   };
 }
 

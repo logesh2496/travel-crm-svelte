@@ -192,7 +192,7 @@
               <td>
                 <select class="badge {PBADGE[q.pri] || 'b-gray'}" style="font-size:10px; border:none; outline:none; cursor:pointer;" 
                   value={q.pri} 
-                  onchange={(e) => onAction('update-lead', { id: q.leadId, pri: e.target.value })}>
+                  onchange={(e) => onAction('update-lead', { leadId: q.leadId, pri: e.target.value })}>
                   <option value="Urgent" style="background:#fff;color:#000">Urgent</option>
                   <option value="High" style="background:#fff;color:#000">High</option>
                   <option value="Normal" style="background:#fff;color:#000">Normal</option>
@@ -202,7 +202,7 @@
               <td>
                 <select class="badge {SBADGE[q.status] || 'b-gray'}" style="border:none; outline:none; cursor:pointer; appearance:auto; -webkit-appearance:auto; padding-right:1rem;" 
                   value={q.status} 
-                  onchange={(e) => onAction('update-lead', { id: q.leadId, status: e.target.value })}>
+                  onchange={(e) => onAction('update-lead', { leadId: q.leadId, status: e.target.value })}>
                   <option value="New" style="background:#fff;color:#000">New</option>
                   <option value="Contacted" style="background:#fff;color:#000">Contacted</option>
                   <option value="Quote Sent" style="background:#fff;color:#000">Quote Sent</option>
@@ -239,7 +239,7 @@
                     <i class="ti ti-brand-whatsapp"></i>
                   </button>
                   {#if q.status !== 'Confirmed'}
-                  <button class="icon-btn" title="Confirm" onclick={() => onAction('update-lead', { id: q.leadId, status: 'Confirmed' })} type="button">
+                  <button class="icon-btn" title="Confirm" onclick={() => onAction('update-lead', { leadId: q.leadId, status: 'Confirmed' })} type="button">
                     <i class="ti ti-circle-check" style="color:var(--success)"></i>
                   </button>
                   {/if}

@@ -11,10 +11,12 @@
   import ItineraryBuilder from '$lib/components/pages/ItineraryBuilder.svelte';
   import OtherPages from '$lib/components/pages/OtherPages.svelte';
   import Settings from '$lib/components/pages/Settings.svelte';
-
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
+  
   // App state
   let isLoggedIn = $state(false);
-  let activePage = $state('dashboard');
+  let activePage = $derived($page.url.pathname === '/' ? 'dashboard' : $page.url.pathname.slice(1).split('/')[0]);
   let currentUser = $state({ name: 'Amit Kumar', role: 'Admin', roleLbl: 'Administrator', email: 'admin@travelcrm.com', avatar: 'AK' });
   let leads = $state<Lead[]>([]);
 
@@ -68,6 +70,16 @@
     loadLeads();
   });
 
+  $effect(() => {
+    if (activePage === 'leads' && $page.url.searchParams.get('action') === 'new') {
+      openModalId = 'addQueryModal';
+      // Clean up the URL parameter
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('action');
+      window.history.replaceState({}, '', newUrl);
+    }
+  });
+
   function handleLogin(user: any) {
     currentUser = user;
     isLoggedIn = true;
@@ -81,8 +93,12 @@
     triggerToast('Logged out successfully', 'success');
   }
 
-  function handleNavigate(page: string, data?: any) {
-    activePage = page;
+  function handleNavigate(pageId: string, data?: any) {
+    if (pageId === 'dashboard') {
+      goto('/', { keepFocus: true });
+    } else {
+      goto(`/${pageId}`, { keepFocus: true });
+    }
     pageData = data;
   }
 
@@ -90,10 +106,7 @@
     if (actionName === 'toast') {
       triggerToast(data.msg, data.type);
     } else if (actionName === 'new-query') {
-      activePage = 'queries';
-      setTimeout(() => {
-        openModalId = 'addQueryModal';
-      }, 50);
+      goto('/leads?action=new');
     } else if (actionName === 'notify') {
       triggerToast('No new notifications', 'info');
     } else if (actionName === 'update-lead') {
@@ -102,6 +115,31 @@
         updateLead(leadId, updates); // non-blocking update
         leads = leads.map(l => l.leadId === leadId ? { ...l, ...updates } : l);
         triggerToast('Lead updated successfully', 'success');
+        
+        if (updates.status === 'Confirmed') {
+          const lead = leads.find(l => l.leadId === leadId);
+          if (lead) {
+            import('$lib/firebase/booking.db').then(({ createBooking }) => {
+              createBooking({
+                leadId: lead.leadId,
+                customerName: lead.name || '',
+                customerPhone: lead.phone || '',
+                packageName: lead.dest || '',
+                hotelName: '',
+                travelDates: lead.date || '',
+                pax: (lead as any).pax || '',
+                totalAmount: parseInt(lead.budget?.replace(/[^0-9]/g, '') || '0'),
+                paidAmount: 0,
+                balanceAmount: parseInt(lead.budget?.replace(/[^0-9]/g, '') || '0'),
+                status: 'Confirmed'
+              }).then(() => {
+                triggerToast('Booking auto-created', 'success');
+              }).catch(err => {
+                console.error('Failed to auto-create booking:', err);
+              });
+            });
+          }
+        }
       } catch (err) {
         console.error('Failed to update lead:', err);
         leads = leads.map(l => l.leadId === leadId ? { ...l, ...updates } : l);
@@ -122,7 +160,7 @@
         
         if (action === 'save-quote') {
           triggerToast('Lead saved! Starting itinerary builder...', 'success');
-          activePage = 'itineraries';
+          goto(`/itineraries?lead=${newId}`);
         } else {
           triggerToast('Query saved successfully!', 'success');
         }
@@ -133,7 +171,7 @@
         leads = [leadData, ...leads];
         
         if (action === 'save-quote') {
-          activePage = 'itineraries';
+          goto(`/itineraries?lead=${leadData.leadId}`);
         }
       }
     } else if (type === 'followup') {

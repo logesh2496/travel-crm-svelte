@@ -3,6 +3,8 @@
   import type { Lead } from '$lib/firebase/lead.db';
   import { createItinerary, fetchItineraryByLeadId } from '$lib/firebase/itinerary.db';
   import { createPackage, fetchPackages, type PackageTemplate } from '$lib/firebase/package.db';
+  import { fetchAgencySettings } from '$lib/firebase/settings.db';
+  import { page } from '$app/stores';
 
   let { leads = [], onNavigate, onAction } = $props<{
     leads: Lead[];
@@ -24,6 +26,18 @@
   let currentLead = $derived(leads.find((l: Lead) => l.leadId === selectedLeadId));
 
   $effect(() => {
+    const leadParam = $page.url.searchParams.get('lead');
+    if (leadParam && selectedLeadId === '') {
+      selectedLeadId = leadParam;
+      
+      // Remove URL parameter
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('lead');
+      window.history.replaceState({}, '', newUrl);
+    }
+  });
+
+  $effect(() => {
     if (currentLead) {
       loadItineraryForLead(currentLead.leadId);
     }
@@ -41,13 +55,23 @@
           iend = existingItin.endDate || '';
           iadults = existingItin.adults || 1;
           ichildren = existingItin.children || 0;
-          itheme = existingItin.theme || '';
+          itheme = existingItin.theme || defaultTheme;
           itinDays = existingItin.days ? existingItin.days.map(d => ({title: d.title, activities: [...d.activities]})) : [];
           customChipInputs = itinDays.map(() => '');
           if (existingItin.costing) {
             profitMarginPct = existingItin.costing.profitMarginPct ?? 15;
             gstPct = existingItin.costing.gstPct ?? 5;
             discount = existingItin.costing.discount ?? 0;
+            manualOverride = existingItin.costing.manualOverride ?? false;
+            if (manualOverride) {
+              qF = existingItin.costing.qF ?? 0;
+              qH = existingItin.costing.qH ?? 0;
+              qT = existingItin.costing.qT ?? 0;
+              qS = existingItin.costing.qS ?? 0;
+              qI = existingItin.costing.qI ?? 0;
+            }
+          } else {
+            manualOverride = false;
           }
         });
       } else {
@@ -66,7 +90,8 @@
           }
           iadults = 2;
           ichildren = 0;
-          itheme = '';
+          itheme = defaultTheme;
+          manualOverride = false;
         });
       }
     } catch (err) {
@@ -110,10 +135,16 @@
 
   let packages = $state<PackageTemplate[]>([]);
   let itinTemplate = $state('');
+  let defaultTheme = $state('');
 
   onMount(async () => {
     try {
       packages = await fetchPackages();
+      const settings = await fetchAgencySettings();
+      if (settings?.agencyName) {
+        defaultTheme = `Travel planned by ${settings.agencyName}`;
+        if (!itheme) itheme = defaultTheme;
+      }
     } catch (err) {
       console.error(err);
     }
@@ -157,7 +188,7 @@
         children: ichildren,
         theme: itheme,
         days: $state.snapshot(itinDays),
-        costing: { baseCost, profitMarginPct, profitMarginAmt, gstPct, gstAmt, discount, finalCost }
+        costing: { baseCost, profitMarginPct, profitMarginAmt, gstPct, gstAmt, discount, finalCost, qF, qH, qT, qS, qI, manualOverride }
       };
       const savedId = await createItinerary(data);
       currentItineraryId = savedId;
