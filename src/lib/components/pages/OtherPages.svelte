@@ -10,10 +10,11 @@
   import ClientCommunication from './ClientCommunication.svelte';
   import type { Lead } from '$lib/firebase/lead.db';
 
-  let { activePage, pageData, leads = [], onNavigate, onOpenModal, onAction, user } = $props<{
+  let { activePage, pageData, leads = [], refreshFollowups, onNavigate, onOpenModal, onAction, user } = $props<{
     activePage: string;
     pageData?: any;
     leads?: Lead[];
+    refreshFollowups?: number;
     onNavigate: (page: string, data?: any) => void;
     onOpenModal: (modalId: string) => void;
     onAction: (actionName: string, data?: any) => void;
@@ -168,7 +169,7 @@
   <BookingsPage {leads} {onAction} />
 
 {:else if activePage === 'followups'}
-  <FollowupsPage {onOpenModal} {onAction} />
+  <FollowupsPage {onOpenModal} {onAction} {refreshFollowups} />
 
 {:else if activePage === 'invoices'}
   <div class="page active" id="page-invoices">

@@ -44,10 +44,10 @@
   async function loadLeads() {
     try {
       leads = await fetchLeads();
-      triggerToast('Connected to Firebase successfully', 'success');
+      // triggerToast('Connected to Firebase successfully', 'success');
     } catch (error) {
       console.error('Failed to load leads from Firebase:', error);
-      triggerToast('Firebase connection failed, loading mock data', 'error');
+      triggerToast('Connection to the server failed.', 'error');
       // Mock data fallback if database fails
       leads = [
         { leadId: 'LD-24-100', name: 'Priya Sharma', phone: '+91 98765 43210', dest: 'Maldives', date: '2026-07-15', budget: '₹1,72,000', src: 'Website', exec: 'Ravi Kumar', pri: 'Urgent', status: 'New' },

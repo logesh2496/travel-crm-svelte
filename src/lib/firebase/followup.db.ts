@@ -12,6 +12,7 @@ export interface Followup {
   exec: string;
   notes: string;
   status?: string;
+  timestamp?: number;
 }
 
 export const fetchFollowups = async (): Promise<Followup[]> => {
