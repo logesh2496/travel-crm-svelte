@@ -7,6 +7,7 @@
   import UsersManagement from './UsersManagement.svelte';
   import MastersPage from './MastersPage.svelte';
   import SuppliersManagement from './SuppliersManagement.svelte';
+  import B2BManagement from './B2BManagement.svelte';
   import ClientCommunication from './ClientCommunication.svelte';
   import type { Lead } from '$lib/firebase/lead.db';
 
@@ -224,26 +225,7 @@
   <SupplierPayments />
 
 {:else if activePage === 'b2b'}
-  <div class="page active" id="page-b2b">
-    <div class="ph">
-      <h2>B2B / B2C Management</h2>
-    </div>
-    <div class="tabs">
-      <button class="tab" class:active={activeBizTab === 'b2b'} onclick={() => activeBizTab = 'b2b'} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">B2B Agents (24)</button>
-      <button class="tab" class:active={activeBizTab === 'b2c'} onclick={() => activeBizTab = 'b2c'} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">B2C Clients (186)</button>
-    </div>
-    <div class="g3" id="agentCards">
-      <div class="agent-card">
-        <div class="agent-top"><div class="agent-avatar">SS</div><div><div style="font-size:14px;font-weight:700">Sunrise Travels</div><div style="font-size:12px;color:var(--text2)">Mumbai · B2B Agent</div></div><span class="badge b-green" style="margin-left:auto">Active</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:10px">
-          <div style="background:var(--bg2);padding:8px;border-radius:var(--radius)"><div style="color:var(--text2)">Total Business</div><div style="font-weight:700;color:var(--teal)">₹18.4L</div></div>
-        </div>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-xs btn-teal" onclick={() => onAction('toast', { msg: 'Emailed agent!', type: 'success' })} type="button"><i class="ti ti-mail"></i>Email</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <B2BManagement {onAction} />
 
 {:else if activePage === 'suppliers'}
   <SuppliersManagement />

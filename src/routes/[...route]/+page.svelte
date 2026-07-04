@@ -13,11 +13,15 @@
   import Settings from '$lib/components/pages/Settings.svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  
+  import { auth } from '$lib/firebase/services';
+  import { onAuthStateChanged, signOut } from 'firebase/auth';
+  import { doc, onSnapshot } from 'firebase/firestore';
+  import db from '$lib/firebase/db';
+  import { getUser } from '$lib/firebase/user.db';
   // App state
   let isLoggedIn = $state(false);
   let activePage = $derived($page.url.pathname === '/' ? 'dashboard' : $page.url.pathname.slice(1).split('/')[0]);
-  let currentUser = $state({ name: 'Amit Kumar', role: 'Admin', roleLbl: 'Administrator', email: 'admin@travelcrm.com', avatar: 'AK' });
+  let currentUser = $state<any>(null);
   let leads = $state<Lead[]>([]);
 
   // Modal control
@@ -66,8 +70,63 @@
     }
   }
 
+  let unsubscribeSession: any = null;
+
   onMount(() => {
     loadLeads();
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User signed in
+        const dbUser = await getUser(user.uid);
+        if (dbUser) {
+          let displayName = dbUser.name || 'User';
+          let roles = dbUser.roles || [];
+          let roleLbl = roles.join(', ');
+          let avatar = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+          currentUser = {
+            uid: user.uid,
+            name: displayName,
+            role: roles[0] || 'User',
+            roleLbl,
+            email: dbUser.email,
+            avatar,
+            tenantId: 'default_tenant'
+          };
+          
+          isLoggedIn = true;
+
+          // Single Active Session Listener
+          if (unsubscribeSession) unsubscribeSession();
+          
+          const localSessionId = sessionStorage.getItem('activeSessionId');
+          unsubscribeSession = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.data();
+              if (data.activeSessionId && localSessionId && data.activeSessionId !== localSessionId) {
+                // Another device logged in
+                triggerToast('Session active on another device. Logging out...', 'error');
+                handleLogout();
+              }
+            }
+          });
+        }
+      } else {
+        // User signed out
+        isLoggedIn = false;
+        currentUser = null;
+        if (unsubscribeSession) {
+          unsubscribeSession();
+          unsubscribeSession = null;
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeSession) unsubscribeSession();
+    };
   });
 
   $effect(() => {
@@ -80,14 +139,14 @@
     }
   });
 
-  function handleLogin(user: any) {
-    currentUser = user;
-    isLoggedIn = true;
-    triggerToast('Logged in successfully', 'success');
-  }
-
-  function handleLogout() {
+  async function handleLogout() {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error(e);
+    }
     isLoggedIn = false;
+    currentUser = null;
     activePage = 'dashboard';
     pageData = null;
     triggerToast('Logged out successfully', 'success');
@@ -199,7 +258,7 @@
 </script>
 
 {#if !isLoggedIn}
-  <Login onLogin={handleLogin} />
+  <Login />
 {:else}
   <div id="crmApp" style="display: block;">
     <div class="shell">

@@ -8,9 +8,13 @@ import {
   deleteDoc,
   query,
   orderBy,
-  serverTimestamp
+  serverTimestamp,
+  setDoc
 } from "firebase/firestore";
 import db from "./db";
+import { initializeApp } from "firebase/app";
+import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import mainApp from "./firebase";
 
 const COLLECTION_NAME = "users";
 const usersCollection = collection(db, COLLECTION_NAME);
@@ -23,6 +27,7 @@ export interface AppUser {
   status: 'Active' | 'Inactive';
   createdAt?: any;
   updatedAt?: any;
+  activeSessionId?: string;
 }
 
 export const getUsers = async (): Promise<AppUser[]> => {
@@ -53,14 +58,30 @@ export const getUser = async (id: string): Promise<AppUser | null> => {
   }
 };
 
-export const addUser = async (user: Omit<AppUser, "id">): Promise<string> => {
+export const addUser = async (user: Omit<AppUser, "id">, defaultPassword?: string): Promise<string> => {
   try {
-    const docRef = await addDoc(usersCollection, {
+    // 1. Create the user in Firebase Auth using a secondary app to avoid logging out the current admin
+    const secondaryApp = initializeApp(mainApp.options, "SecondaryApp");
+    const secondaryAuth = getAuth(secondaryApp);
+    
+    // Use the provided default password or generate a random one
+    const passwordToUse = defaultPassword || Math.random().toString(36).slice(-8) + "A1!";
+    
+    const userCredential = await createUserWithEmailAndPassword(secondaryAuth, user.email, passwordToUse);
+    const newUid = userCredential.user.uid;
+    
+    // Sign out the secondary app just to be clean
+    await signOut(secondaryAuth);
+
+    // 2. Add the user to Firestore using their new UID as the document ID
+    const docRef = doc(db, COLLECTION_NAME, newUid);
+    await setDoc(docRef, {
       ...user,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    return docRef.id;
+    
+    return newUid;
   } catch (error) {
     console.error("Error adding user:", error);
     throw error;

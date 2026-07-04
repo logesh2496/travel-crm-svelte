@@ -35,8 +35,8 @@
   }
 
   async function handleSaveUser() {
-    if (!uName || !uEmail || selectedRoles.length === 0) {
-      alert("Name, Email, and at least one Role are required.");
+    if (!uName || !uEmail || !uPass || selectedRoles.length === 0) {
+      alert("Name, Email, Password, and at least one Role are required.");
       return;
     }
     
@@ -51,7 +51,9 @@
         email: uEmail,
         roles: selectedRoles,
         status: 'Active'
-      });
+      }, uPass);
+      
+      alert(`User created! They can log in with password: ${uPass}`);
       
       closeModal();
       await fetchUsers();

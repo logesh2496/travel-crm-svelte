@@ -1,46 +1,37 @@
 <script lang="ts">
-  import { getUsers } from '$lib/firebase/user.db';
+  import { getUser, updateUser } from '$lib/firebase/user.db';
+  import { auth } from '$lib/firebase/services';
+  import { signInWithEmailAndPassword } from 'firebase/auth';
 
-  let { onLogin } = $props<{ onLogin: (user: any) => void }>();
-
-  let email = $state('admin@travelcrm.com');
-  let password = $state('password');
-  let selectedRole = $state('Admin');
+  let email = $state('');
+  let password = $state('');
   let isLoading = $state(false);
-
-  const roles = [
-    { name: 'Admin', email: 'admin@travelcrm.com' },
-    { name: 'Sales', email: 'sales@travelcrm.com' },
-    { name: 'Operations', email: 'ops@travelcrm.com' },
-    { name: 'Accounts', email: 'accounts@travelcrm.com' }
-  ];
-
-  function quickLogin(roleName: string, roleEmail: string) {
-    email = roleEmail;
-    selectedRole = roleName;
-  }
 
   async function handleLogin() {
     isLoading = true;
     try {
-      const users = await getUsers();
-      const dbUser = users.find(u => u.email === email);
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCred.user.uid;
+      
+      const dbUser = await getUser(uid);
+      
+      if (!dbUser) {
+        alert("User record not found in system");
+        auth.signOut();
+        isLoading = false;
+        return;
+      }
 
-      let displayName = dbUser?.name || 'Amit Kumar';
-      let roles = dbUser?.roles || [selectedRole];
-      let roleLbl = roles.join(', ');
-      let avatar = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+      // Generate session ID for single active session
+      const sessionId = crypto.randomUUID();
+      sessionStorage.setItem('activeSessionId', sessionId);
+      await updateUser(uid, { activeSessionId: sessionId });
 
-      onLogin({
-        email,
-        name: displayName,
-        roles: roles, // this provides the roles array to App/Sidebar
-        roleLbl,
-        avatar
-      });
-    } catch (e) {
+      // Note: We don't call onLogin here anymore, as we will rely on onAuthStateChanged in the layout
+      
+    } catch (e: any) {
       console.error(e);
-      alert('Login failed');
+      alert('Login failed: ' + e.message);
     }
     isLoading = false;
   }
@@ -53,29 +44,14 @@
       <h1>TravelCRM Pro</h1>
       <p>Complete Travel Agency Management System v2.0</p>
     </div>
-    <p style="font-size:12px;color:var(--text2);margin-bottom:10px;font-weight:600">Quick Login as:</p>
-    <div class="login-roles">
-      {#each roles as r}
-        <button 
-          class="role-pill" 
-          class:active={selectedRole === r.name}
-          onclick={() => quickLogin(r.name, r.email)}
-          type="button"
-          style="text-align: left; background: none; border: none; font: inherit; cursor: pointer; width: 100%;"
-        >
-          <div class="rn">{r.name}</div>
-          <div class="re">{r.email}</div>
-        </button>
-      {/each}
-    </div>
     <form class="lform" onsubmit={(e) => { e.preventDefault(); handleLogin(); }}>
       <div>
         <label for="lEmail">Email</label>
-        <input type="email" id="lEmail" bind:value={email}>
+        <input type="email" id="lEmail" bind:value={email} placeholder="Enter your email" required>
       </div>
       <div>
         <label for="lPass">Password</label>
-        <input type="password" id="lPass" bind:value={password}>
+        <input type="password" id="lPass" bind:value={password} placeholder="••••••••" required>
       </div>
       <button class="btn-login" type="submit" disabled={isLoading}>
         {#if isLoading}
@@ -85,6 +61,6 @@
         {/if}
       </button>
     </form>
-    <div class="login-hint">Demo password: <strong>password</strong> for all roles</div>
+    <div class="login-hint" style="margin-top: 20px;">Secure Access Only</div>
   </div>
 </div>
