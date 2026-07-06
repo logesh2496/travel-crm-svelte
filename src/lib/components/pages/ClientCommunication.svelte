@@ -34,8 +34,12 @@
   let isSavingTemplates = $state(false);
 
   // WhatsApp state
-  let waTpl = $state('q');
-  let waMsg = $state('');
+  let waTpl = $state('');
+  let waMsg = $state(''); // fallback text message or preview if we parse template components
+  let waTemplates = $state<any[]>([]);
+  let isLoadingWaTemplates = $state(false);
+  let waRecipient = $state('');
+  let isSendingWa = $state(false);
 
   onMount(async () => {
     try {
@@ -160,13 +164,108 @@
     }
   }
 
+  async function loadWaTemplates() {
+    if (waTemplates.length > 0) return;
+    if (!settings?.whatsappSettings?.accessToken || !settings?.whatsappSettings?.businessAccountId) {
+      onAction('toast', { msg: 'WhatsApp is not configured in Settings.', type: 'warning' });
+      return;
+    }
+    
+    isLoadingWaTemplates = true;
+    try {
+      const res = await fetch(`https://graph.facebook.com/v19.0/${settings.whatsappSettings.businessAccountId}/message_templates?access_token=${settings.whatsappSettings.accessToken}`);
+      const data = await res.json();
+      if (data.data) {
+        waTemplates = data.data.filter((t: any) => t.status === 'APPROVED');
+        if (waTemplates.length > 0 && !waTpl) {
+          waTpl = waTemplates[0].name;
+          updateWaPreview();
+        }
+      } else if (data.error) {
+         console.error('FB API Error:', data.error);
+         onAction('toast', { msg: 'Error loading templates: ' + data.error.message, type: 'error' });
+      }
+    } catch (e) {
+      console.error(e);
+      onAction('toast', { msg: 'Failed to fetch WhatsApp templates.', type: 'error' });
+    } finally {
+      isLoadingWaTemplates = false;
+    }
+  }
+
+  function updateWaPreview() {
+    const tpl = waTemplates.find(t => t.name === waTpl);
+    if (tpl) {
+      const bodyComponent = tpl.components.find((c: any) => c.type === 'BODY');
+      if (bodyComponent) {
+        waMsg = bodyComponent.text;
+      } else {
+        waMsg = 'No body component in this template.';
+      }
+    } else {
+      waMsg = '';
+    }
+  }
+
+  async function handleSendWaMessage() {
+    if (!settings?.whatsappSettings?.accessToken || !settings?.whatsappSettings?.phoneNumberId) {
+      onAction('toast', { msg: 'WhatsApp is not configured in Settings.', type: 'error' });
+      return;
+    }
+    if (!waRecipient) {
+       onAction('toast', { msg: 'Please provide a recipient phone number (with country code).', type: 'error' });
+       return;
+    }
+    if (!waTpl) {
+       onAction('toast', { msg: 'Please select a template.', type: 'error' });
+       return;
+    }
+
+    const tpl = waTemplates.find(t => t.name === waTpl);
+    if (!tpl) return;
+
+    isSendingWa = true;
+    try {
+      const res = await fetch(`https://graph.facebook.com/v19.0/${settings.whatsappSettings.phoneNumberId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${settings.whatsappSettings.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: waRecipient.replace(/\D/g, ''), // strip non-numeric
+          type: 'template',
+          template: {
+            name: tpl.name,
+            language: {
+              code: tpl.language
+            }
+          }
+        })
+      });
+
+      const data = await res.json();
+      if (data.error) {
+        throw new Error(data.error.message);
+      }
+      onAction('toast', { msg: 'WhatsApp message sent successfully!', type: 'success' });
+      waRecipient = '';
+    } catch (e: any) {
+      console.error(e);
+      onAction('toast', { msg: 'Failed to send WhatsApp message: ' + e.message, type: 'error' });
+    } finally {
+      isSendingWa = false;
+    }
+  }
+
 </script>
 
 <div class="page active" id="page-communication">
   <div class="ph"><h2>Client Communication</h2></div>
   <div class="tabs">
     <button class="tab" class:active={activeCommTab === 'email'} onclick={() => activeCommTab = 'email'} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">Email</button>
-    <button class="tab" class:active={activeCommTab === 'whatsapp'} onclick={() => activeCommTab = 'whatsapp'} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">WhatsApp</button>
+    <button class="tab" class:active={activeCommTab === 'whatsapp'} onclick={() => { activeCommTab = 'whatsapp'; loadWaTemplates(); }} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">WhatsApp</button>
     <button class="tab" class:active={activeCommTab === 'templates'} onclick={() => activeCommTab = 'templates'} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">Templates</button>
   </div>
   
@@ -355,24 +454,46 @@
           <div class="card-title"><i class="ti ti-brand-whatsapp" style="color:#25D366"></i>WhatsApp Web Integrated</div>
           <div style="display:flex;flex-direction:column;gap:12px">
             <div class="fg">
-              <label for="waTpl">Template</label>
-              <select id="waTpl" bind:value={waTpl}>
-                <option value="q">Send Quotation</option>
-                <option value="f">Follow-Up</option>
-                <option value="p">Payment Reminder</option>
-                <option value="c">Booking Confirmation</option>
-                <option value="t">Travel Reminder</option>
-              </select>
+              <label for="waRecipient">To Phone Number</label>
+              <input id="waRecipient" bind:value={waRecipient} placeholder="1234567890 (with country code)">
             </div>
-            <div class="fg"><label for="waMsg">Message</label><textarea id="waMsg" rows="7" bind:value={waMsg}></textarea></div>
-            <div><button class="btn btn-wa btn-sm" onclick={() => onAction('toast', { msg: 'Message sent via WhatsApp!', type: 'success' })} type="button"><i class="ti ti-send"></i>Send Now</button></div>
+            <div class="fg">
+              <label for="waTpl">Template</label>
+              {#if isLoadingWaTemplates}
+                <div>Loading templates from Meta...</div>
+              {:else if waTemplates.length === 0}
+                <div style="color: var(--text2); font-size: 14px;">No approved templates found. Make sure you have configured your WhatsApp credentials in Settings.</div>
+              {:else}
+                <select id="waTpl" bind:value={waTpl} onchange={updateWaPreview}>
+                  <option value="">-- Select Template --</option>
+                  {#each waTemplates as t}
+                    <option value={t.name}>{t.name} ({t.language})</option>
+                  {/each}
+                </select>
+              {/if}
+            </div>
+            
+            <div style="margin-top: 12px;">
+              <button class="btn btn-wa btn-sm" onclick={handleSendWaMessage} type="button" disabled={isSendingWa || !waTpl}>
+                {#if isSendingWa}
+                  <i class="ti ti-loader"></i>Sending...
+                {:else}
+                  <i class="ti ti-send"></i>Send Now
+                {/if}
+              </button>
+            </div>
           </div>
         </div>
         <div class="card">
           <div class="card-title"><i class="ti ti-device-mobile"></i>Preview</div>
+          <p style="font-size: 0.8rem; color: var(--text2); margin-bottom: 10px;">This shows the plain text of the template's body component.</p>
           <div style="background:#e5ddd5;border-radius:var(--radius-lg);padding:16px">
             <div style="background:#fff;border-radius:12px 12px 12px 0;padding:12px;font-size:13px;line-height:1.6;box-shadow:0 1px 2px rgba(0,0,0,.1)">
-              {@html waMsg.replace(/\n/g, '<br>')}
+              {#if waMsg}
+                {@html waMsg.replace(/\n/g, '<br>')}
+              {:else}
+                <span style="color: #999; font-style: italic;">Select a template to preview its body text.</span>
+              {/if}
             </div>
           </div>
         </div>

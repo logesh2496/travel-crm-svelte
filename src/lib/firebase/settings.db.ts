@@ -20,6 +20,11 @@ export interface AgencySettings {
     user: string;
     pass: string;
   };
+  whatsappSettings?: {
+    accessToken: string;
+    phoneNumberId: string;
+    businessAccountId: string;
+  };
 }
 
 const encryptData = (data: string) => {
@@ -42,19 +47,25 @@ export const fetchAgencySettings = async (tenantId: string = DEFAULT_TENANT_ID):
   const docSnap = await getDoc(docRef);
   
   const defaultSettings: AgencySettings = {
-    agencyName: "TravelCRM Pro Agency",
-    gstNumber: "27AABCT1234F1Z5",
+    agencyName: "",
+    gstNumber: "",
     smtpSettings: {
       host: "",
       port: "",
       user: "",
       pass: ""
+    },
+    whatsappSettings: {
+      accessToken: "",
+      phoneNumberId: "",
+      businessAccountId: ""
     }
   };
 
   if (docSnap.exists()) {
     const data = docSnap.data() as Partial<AgencySettings>;
     const fetchedSmtp: any = data.smtpSettings || {};
+    const fetchedWa: any = data.whatsappSettings || {};
     return {
       ...defaultSettings,
       ...data,
@@ -62,6 +73,11 @@ export const fetchAgencySettings = async (tenantId: string = DEFAULT_TENANT_ID):
         ...defaultSettings.smtpSettings,
         ...fetchedSmtp,
         pass: fetchedSmtp.pass ? decryptData(fetchedSmtp.pass) : ""
+      },
+      whatsappSettings: {
+        ...defaultSettings.whatsappSettings,
+        ...fetchedWa,
+        accessToken: fetchedWa.accessToken ? decryptData(fetchedWa.accessToken) : ""
       }
     } as AgencySettings;
   }
@@ -77,6 +93,13 @@ export const saveAgencySettings = async (settings: AgencySettings, tenantId: str
     settingsToSave.smtpSettings = {
       ...settingsToSave.smtpSettings,
       pass: encryptData(settingsToSave.smtpSettings.pass)
+    };
+  }
+
+  if (settingsToSave.whatsappSettings?.accessToken) {
+    settingsToSave.whatsappSettings = {
+      ...settingsToSave.whatsappSettings,
+      accessToken: encryptData(settingsToSave.whatsappSettings.accessToken)
     };
   }
   

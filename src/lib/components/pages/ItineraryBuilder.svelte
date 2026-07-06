@@ -56,7 +56,7 @@
           iadults = existingItin.adults || 1;
           ichildren = existingItin.children || 0;
           itheme = existingItin.theme || defaultTheme;
-          itinDays = existingItin.days ? existingItin.days.map(d => ({title: d.title, activities: [...d.activities]})) : [];
+          itinDays = existingItin.days ? existingItin.days.map(d => ({title: d.title, activities: d.activities.map((a: any) => typeof a === 'string' ? { text: a, time: '' } : { ...a })})) : [];
           customChipInputs = itinDays.map(() => '');
           if (existingItin.costing) {
             profitMarginPct = existingItin.costing.profitMarginPct ?? 15;
@@ -100,10 +100,62 @@
   }
 
   // --- Itinerary State ---
-  let itinDays = $state<{ title: string; activities: string[] }[]>([]);
+  let itinDays = $state<{ title: string; activities: any[] }[]>([]);
 
-  const PREDEFINED_CHIPS = ['Sightseeing', 'Leisure', 'Beach', 'Spa', 'Transfer', 'Breakfast', 'Lunch', 'Dinner', 'City Tour'];
   let customChipInputs = $state<string[]>([]);
+  let activeDropdownIndex = $state<number | null>(null);
+  let suggestions = $state<any[]>([]);
+  let suggestionLoading = $state(false);
+  let autocompleteTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  async function fetchSuggestions(query: string) {
+    if (!query || query.length < 2) {
+      suggestions = [];
+      return;
+    }
+    suggestionLoading = true;
+    try {
+      const res = await fetch(`https://suggest.latlng.work/autosuggest?q=${encodeURIComponent(query)}`, {
+        headers: {
+          'X-Api-Key': 'latlng_suu95lb4ezyw9mdqctsr5idgvc9bmpr0'
+        }
+      });
+      const data = await res.json();
+      suggestions = data.suggestions || [];
+    } catch (e) {
+      console.error(e);
+      suggestions = [];
+    } finally {
+      suggestionLoading = false;
+    }
+  }
+
+  function handleInput(e: Event, dayIndex: number) {
+    const target = e.target as HTMLInputElement;
+    const val = target.value;
+    customChipInputs[dayIndex] = val;
+    activeDropdownIndex = dayIndex;
+    
+    if (autocompleteTimeout) clearTimeout(autocompleteTimeout);
+    autocompleteTimeout = setTimeout(() => {
+      fetchSuggestions(val);
+    }, 300);
+  }
+
+  function addSuggestion(dayIndex: number, suggestion: any) {
+    const locationParts = [suggestion.city, suggestion.region, suggestion.country].filter(Boolean);
+    itinDays[dayIndex].activities.push({
+      text: suggestion.name,
+      location: locationParts.join(', '),
+      category: suggestion.category,
+      type: suggestion.type,
+      time: ''
+    });
+    itinDays = [...itinDays];
+    customChipInputs[dayIndex] = '';
+    suggestions = [];
+    activeDropdownIndex = null;
+  }
 
   $effect(() => {
     if (istart && iend) {
@@ -154,7 +206,7 @@
     if (!val) return;
     const pkg = packages.find(p => p.id === val);
     if (pkg) {
-      itinDays = pkg.days.map(d => ({ title: d.title, activities: [...d.activities] }));
+      itinDays = pkg.days.map(d => ({ title: d.title, activities: d.activities.map((a: any) => typeof a === 'string' ? { text: a, time: '' } : { ...a }) }));
       customChipInputs = itinDays.map(() => '');
       itinTitle = pkg.title;
       itinDest = pkg.destination;
@@ -194,6 +246,7 @@
       currentItineraryId = savedId;
       onAction('toast', { msg: 'Itinerary saved!', type: 'success' });
     } catch (err) {
+      console.error(err);
       onAction('toast', { msg: 'Failed to save itinerary', type: 'error' });
     }
   }
@@ -300,31 +353,67 @@
             <button class="btn btn-primary btn-xs" onclick={addItinDay} type="button"><i class="ti ti-plus"></i>Add Day</button>
           </div>
           {#each itinDays as day, i}
-            <div class="itin-day" id="iday-{i+1}" style="margin-bottom:8px">
+            <div class="itin-day" id="iday-{i+1}" style="margin-bottom:8px; position:relative; z-index:{activeDropdownIndex === i ? 50 : 1}; overflow:visible;">
               <div class="itin-day-header" style="display:flex; align-items:center; background:var(--navy); padding:8px 12px; border-radius:var(--radius) var(--radius) 0 0;">
                 <span style="background:var(--gold);color:var(--navy);border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">D{i+1}</span>
                 <input bind:value={day.title} style="background:none;border:none;color:#fff;font-size:13px;font-weight:600;flex:1;outline:none;margin-left:8px">
                 <button onclick={() => removeItinDay(i)} style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px" type="button">✕</button>
               </div>
               <div class="itin-day-body" style="background:var(--bg2); padding:12px; border-radius:0 0 var(--radius) var(--radius); border: 1px solid var(--border); border-top: none;">
-                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom: 12px;">
+                <div style="display:flex; flex-direction:column; gap:8px; margin-bottom: 12px;">
                   {#each day.activities as act, aIndex}
-                    <div style="background:var(--teal); color:#fff; padding:4px 10px; border-radius:16px; font-size:12px; display:flex; align-items:center; gap:6px;">
-                      {act}
-                      <button type="button" style="background:none; border:none; color:#fff; cursor:pointer; padding:0; font-size:10px; opacity:0.8;" onclick={() => { day.activities.splice(aIndex, 1); itinDays = [...itinDays]; }}>✕</button>
+                    <div style="background:var(--bg); border:1px solid var(--border); padding:8px 12px; border-radius:var(--radius); display:flex; align-items:center; gap:12px;">
+                      <input type="time" bind:value={act.time} style="background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:6px 10px; font-size:13px; color:var(--text); width: 110px; outline:none;">
+                      
+                      <div style="flex:1;">
+                        <div style="font-weight: 600; font-size: 14px; color:var(--text);">{typeof act === 'string' ? act : act.text}</div>
+                        {#if typeof act === 'object' && (act.location || act.category)}
+                          <div style="font-size: 11px; color: var(--text2); margin-top:2px;">
+                            {act.type === 'place' ? '📍' : '🏢'} <span style="text-transform: capitalize;">{act.category}</span> • {act.location}
+                          </div>
+                        {/if}
+                      </div>
+
+                      <button type="button" style="background:none; border:none; color:var(--text3); cursor:pointer; padding:4px; font-size:16px; border-radius:var(--radius);" onclick={() => { day.activities.splice(aIndex, 1); itinDays = [...itinDays]; }}>
+                        <i class="ti ti-trash"></i>
+                      </button>
                     </div>
+
+                    {#if aIndex < day.activities.length - 1}
+                      <div style="display:flex; justify-content:center; margin:-6px 0; position:relative; z-index:2;">
+                        <div style="background:var(--card); border:1px solid var(--border); border-radius:16px; padding:2px 8px; font-size:14px; display:flex; gap:12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                          {#each [{val: 'walk', icon: 'walk'}, {val: 'cab', icon: 'car'}, {val: 'train', icon: 'train'}, {val: 'flight', icon: 'plane'}] as t}
+                            <button 
+                              type="button" 
+                              style="background:none; border:none; cursor:pointer; padding:2px; color:{act.transitToNext === t.val ? 'var(--teal)' : 'var(--text3)'}; transform: {act.transitToNext === t.val ? 'scale(1.1)' : 'scale(1)'}; transition: all 0.2s;"
+                              onclick={() => { act.transitToNext = act.transitToNext === t.val ? null : t.val; itinDays = [...itinDays]; }}
+                              title={t.val}
+                            >
+                              <i class="ti ti-{t.icon}"></i>
+                            </button>
+                          {/each}
+                        </div>
+                      </div>
+                    {/if}
+
                   {/each}
                 </div>
                 
-                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom: 12px;">
-                  {#each PREDEFINED_CHIPS as chip}
-                    <button type="button" style="background:var(--bg); border:1px solid var(--border); color:var(--text2); padding:4px 10px; border-radius:16px; font-size:11px; cursor:pointer;" onclick={() => { day.activities.push(chip); itinDays = [...itinDays]; }}>+ {chip}</button>
-                  {/each}
-                </div>
-                
-                <div style="display:flex; gap:8px;">
-                  <input type="text" placeholder="Add custom activity and press Enter..." style="flex:1; border:none; border-bottom:1px solid var(--border); background:none; font-size:13px; color:var(--text); outline:none; padding:4px 0;" bind:value={customChipInputs[i]} onkeydown={(e) => { if (e.key === 'Enter' && customChipInputs[i].trim()) { day.activities.push(customChipInputs[i].trim()); customChipInputs[i] = ''; itinDays = [...itinDays]; e.preventDefault(); } }}>
-                  <button type="button" class="btn btn-xs" onclick={() => { if (customChipInputs[i]?.trim()) { day.activities.push(customChipInputs[i].trim()); customChipInputs[i] = ''; itinDays = [...itinDays]; } }}>Add</button>
+                <div style="position: relative;">
+                  <div style="display:flex; gap:8px;">
+                    <input type="text" placeholder="Search for places, hotels, sightseeing by real names..." style="flex:1; border:none; border-bottom:1px solid var(--border); background:none; font-size:13px; color:var(--text); outline:none; padding:4px 0;" bind:value={customChipInputs[i]} oninput={(e) => handleInput(e, i)} onblur={() => setTimeout(() => activeDropdownIndex = null, 200)} onkeydown={(e) => { if (e.key === 'Enter' && customChipInputs[i].trim()) { day.activities.push({ text: customChipInputs[i].trim(), time: '' }); customChipInputs[i] = ''; itinDays = [...itinDays]; e.preventDefault(); activeDropdownIndex = null; } }}>
+                    <button type="button" class="btn btn-xs" onclick={() => { if (customChipInputs[i]?.trim()) { day.activities.push({ text: customChipInputs[i].trim(), time: '' }); customChipInputs[i] = ''; itinDays = [...itinDays]; activeDropdownIndex = null; } }}>Add</button>
+                  </div>
+                  {#if activeDropdownIndex === i && suggestions.length > 0}
+                    <div style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; max-height: 200px; overflow-y: auto; margin-top: 4px;">
+                      {#each suggestions as sug}
+                        <button type="button" style="display:block; width:100%; text-align:left; padding: 8px 12px; background:none; border:none; border-bottom: 1px solid var(--border2); cursor: pointer; font-size: 13px; color: var(--text);" onmousedown={() => addSuggestion(i, sug)}>
+                          <div style="font-weight: 600;">{sug.name}</div>
+                          <div style="font-size: 11px; color: var(--text2);">{sug.type === 'place' ? '📍' : '🏢'} {sug.category} • {[sug.city, sug.region, sug.country].filter(Boolean).join(', ')}</div>
+                        </button>
+                      {/each}
+                    </div>
+                  {/if}
                 </div>
               </div>
             </div>
@@ -360,7 +449,20 @@
                 <div style="border-left:3px solid var(--teal);padding:6px 12px;margin-bottom:8px">
                   <div style="font-weight:600;font-size:12px;color:var(--teal)">Day {i+1}</div>
                   <div style="font-weight:600;font-size:13px; color:var(--text)">{day.title}</div>
-                  <div style="font-size:12px;color:var(--text2)">{day.activities.join(' · ')}</div>
+                  <div style="font-size:12px;color:var(--text2); display:flex; flex-wrap:wrap; align-items:center; gap:4px;">
+                    {#each day.activities as act, aIndex}
+                      <span>{typeof act === 'string' ? act : (act.time ? `${act.time} - ${act.text}` : act.text)}</span>
+                      {#if aIndex < day.activities.length - 1}
+                        <span style="color:var(--text3); font-size: 14px; margin: 0 2px;">
+                          {#if act.transitToNext === 'walk'}<i class="ti ti-walk"></i>
+                          {:else if act.transitToNext === 'cab'}<i class="ti ti-car"></i>
+                          {:else if act.transitToNext === 'train'}<i class="ti ti-train"></i>
+                          {:else if act.transitToNext === 'flight'}<i class="ti ti-plane"></i>
+                          {:else}·{/if}
+                        </span>
+                      {/if}
+                    {/each}
+                  </div>
                 </div>
               {/each}
             {/if}
@@ -512,9 +614,24 @@
                   <div style="font-size:13px; font-weight:700; color:var(--teal); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px">Day {i+1}</div>
                   <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px">{day.title}</div>
                   <div style="font-size:14px; color:var(--text2); line-height: 1.6;">
-                    <ul style="margin:0; padding-left:20px;">
-                      {#each day.activities as act}
-                        <li>{act}</li>
+                    <ul style="margin:0; padding-left:20px; list-style-type: none;">
+                      {#each day.activities as act, aIndex}
+                        <li style="margin-bottom: 8px; position: relative;">
+                          <div style="position: absolute; left: -20px; color: var(--teal); top: 2px;">•</div>
+                          {#if typeof act === 'object' && act.time}
+                            <strong style="color:var(--navy);">{act.time}</strong> - 
+                          {/if}
+                          {typeof act === 'string' ? act : act.text}
+                          {#if typeof act === 'object' && act.location}
+                            <span style="font-size:12px; color:var(--text3); margin-left: 4px;">({act.location})</span>
+                          {/if}
+                          
+                          {#if aIndex < day.activities.length - 1 && typeof act === 'object' && act.transitToNext}
+                            <div style="font-size:12px; color:var(--teal); margin-top:4px; display:flex; align-items:center; gap:4px;">
+                              <i class="ti ti-arrow-down"></i> Travel by <span style="text-transform: capitalize; font-weight: 600;">{act.transitToNext}</span>
+                            </div>
+                          {/if}
+                        </li>
                       {/each}
                     </ul>
                   </div>

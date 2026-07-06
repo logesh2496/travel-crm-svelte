@@ -6,7 +6,7 @@ const ITINERARIES_COLLECTION = "itineraries";
 
 export interface ItineraryDay {
   title: string;
-  activities: string[];
+  activities: any[];
 }
 
 export interface Itinerary {
@@ -65,8 +65,9 @@ export const createItinerary = async (data: Itinerary): Promise<string> => {
     await setDoc(doc(db, ITINERARIES_COLLECTION, id), rest);
     return id;
   } else {
+    const { id, ...rest } = data;
     const col = collection(db, ITINERARIES_COLLECTION);
-    const docRef = await addDoc(col, data);
+    const docRef = await addDoc(col, rest);
     return docRef.id;
   }
 };

@@ -17,12 +17,13 @@
   import { onAuthStateChanged, signOut } from 'firebase/auth';
   import { doc, onSnapshot } from 'firebase/firestore';
   import db from '$lib/firebase/db';
-  import { getUser } from '$lib/firebase/user.db';
+  import { getUser, getUsers, type AppUser } from '$lib/firebase/user.db';
   // App state
   let isLoggedIn = $state(false);
   let activePage = $derived($page.url.pathname === '/' ? 'dashboard' : $page.url.pathname.slice(1).split('/')[0]);
   let currentUser = $state<any>(null);
   let leads = $state<Lead[]>([]);
+  let teamUsers = $state<AppUser[]>([]);
 
   // Modal control
   let openModalId = $state<string | null>(null);
@@ -44,29 +45,18 @@
     }, 3200);
   }
 
-  // Load leads from Firebase Firestore
-  async function loadLeads() {
+  // Load data from Firebase Firestore
+  async function loadData() {
     try {
-      leads = await fetchLeads();
-      // triggerToast('Connected to Firebase successfully', 'success');
+      const [fetchedLeads, fetchedUsers] = await Promise.all([
+        fetchLeads(),
+        getUsers()
+      ]);
+      leads = fetchedLeads;
+      teamUsers = fetchedUsers;
     } catch (error) {
-      console.error('Failed to load leads from Firebase:', error);
+      console.error('Failed to load data from Firebase:', error);
       triggerToast('Connection to the server failed.', 'error');
-      // Mock data fallback if database fails
-      leads = [
-        { leadId: 'LD-24-100', name: 'Priya Sharma', phone: '+91 98765 43210', dest: 'Maldives', date: '2026-07-15', budget: '₹1,72,000', src: 'Website', exec: 'Ravi Kumar', pri: 'Urgent', status: 'New' },
-        { leadId: 'LD-24-099', name: 'Gupta Family', phone: '+91 98765 43211', dest: 'Dubai', date: '2026-06-28', budget: '₹2,10,000', src: 'WhatsApp', exec: 'Sneha Patel', pri: 'High', status: 'New' },
-        { leadId: 'LD-24-098', name: 'Vikram Singh', phone: '+91 98765 43212', dest: 'Europe', date: '2026-08-01', budget: '₹5,40,000', src: 'Website', exec: 'Ravi Kumar', pri: 'Normal', status: 'Quote Sent' },
-        { leadId: 'LD-24-097', name: 'Meena Agarwal', phone: '+91 98765 43213', dest: 'Singapore', date: '2026-07-20', budget: '₹1,42,000', src: 'Facebook', exec: 'Amit Joshi', pri: 'Normal', status: 'Follow-Up' },
-        { leadId: 'LD-24-096', name: 'Arjun Patel', phone: '+91 98765 43214', dest: 'Bali', date: '2026-07-10', budget: '₹2,35,000', src: 'Instagram', exec: 'Divya Nair', pri: 'Normal', status: 'Negotiation' },
-        { leadId: 'LD-24-095', name: 'Sunita Rao', phone: '+91 98765 43215', dest: 'Thailand', date: '2026-08-05', budget: '₹98,000', src: 'Referral', exec: 'Karan Mehta', pri: 'Low', status: 'Confirmed' },
-        { leadId: 'LD-24-094', name: 'Deepak Nair', phone: '+91 98765 43216', dest: 'Maldives', date: '2026-07-15', budget: '₹1,80,000', src: 'Website', exec: 'Ravi Kumar', pri: 'High', status: 'Confirmed' },
-        { leadId: 'LD-24-093', name: 'Kapoor Family', phone: '+91 98765 43217', dest: 'Kashmir', date: '2026-06-30', budget: '₹82,000', src: 'Walk-in', exec: 'Karan Mehta', pri: 'Normal', status: 'Follow-Up' },
-        { leadId: 'LD-24-092', name: 'Sanjay Mehta', phone: '+91 98765 43218', dest: 'Mauritius', date: '2026-07-25', budget: '₹2,80,000', src: 'B2B Agent', exec: 'Sneha Patel', pri: 'High', status: 'Confirmed' },
-        { leadId: 'LD-24-091', name: 'Anitha Kumar', phone: '+91 98765 43219', dest: 'Andaman', date: '2026-07-02', budget: '₹72,000', src: 'Phone Call', exec: 'Ravi Kumar', pri: 'Normal', status: 'New' },
-        { leadId: 'LD-24-090', name: 'Rajan Pillai', phone: '+91 98765 43220', dest: 'Switzerland', date: '2026-07-12', budget: '₹5,40,000', src: 'Website', exec: 'Amit Joshi', pri: 'Urgent', status: 'New' },
-        { leadId: 'LD-24-089', name: 'Geeta Sharma', phone: '+91 98765 43221', dest: 'Australia', date: '2026-08-10', budget: '₹3,80,000', src: 'Referral', exec: 'Sneha Patel', pri: 'Normal', status: 'New' }
-      ];
     }
   }
 
@@ -96,7 +86,7 @@
           isLoggedIn = true;
 
           // Load data after successful login
-          loadLeads();
+          loadData();
 
           // Single Active Session Listener
           if (unsubscribeSession) unsubscribeSession();
@@ -321,6 +311,8 @@
     onClose={() => openModalId = null} 
     onSave={handleModalSave} 
     leads={leads}
+    teamUsers={teamUsers}
+    currentUser={currentUser}
   />
 {/if}
 

@@ -1,11 +1,13 @@
 <script lang="ts">
   import type { Lead as LeadType } from '$lib/firebase/lead.db';
 
-  let { openModalId, onClose, onSave, leads = [] } = $props<{
+  let { openModalId, onClose, onSave, leads = [], teamUsers = [], currentUser = null } = $props<{
     openModalId: string | null;
     onClose: () => void;
     onSave: (type: string, data: any) => void;
     leads?: LeadType[];
+    teamUsers?: any[];
+    currentUser?: any;
   }>();
 
   // New Query Form States
@@ -14,7 +16,7 @@
   let qEmail = $state('');
   let qDest = $state('');
   let qSrc = $state('Website');
-  let qExec = $state('Ravi Kumar');
+  let qExec = $state('');
   let qDepDate = $state('');
   let qRetDate = $state('');
   let qAdults = $state(2);
@@ -29,7 +31,7 @@
     qEmail = '';
     qDest = '';
     qSrc = 'Website';
-    qExec = 'Ravi Kumar';
+    qExec = currentUser?.name || (teamUsers.length > 0 ? teamUsers[0].name : '');
     qDepDate = '';
     qRetDate = '';
     qAdults = 2;
@@ -66,7 +68,7 @@
   const todayDate = new Date().toISOString().split('T')[0];
   let fuTime = $state('');
   let fuType = $state('Call');
-  let fuExec = $state('Ravi Kumar');
+  let fuExec = $state('');
   let fuNotes = $state('');
 
   function handleSaveFollowUp() {
@@ -126,8 +128,17 @@
       <div class="fg">
         <label for="qExec">Assigned Executive</label>
         <select id="qExec" bind:value={qExec}>
-          <option>Ravi Kumar</option><option>Sneha Patel</option>
-          <option>Amit Joshi</option><option>Divya Nair</option><option>Karan Mehta</option>
+          {#if teamUsers.length === 0}
+            {#if currentUser}
+              <option value={currentUser.name}>{currentUser.name}</option>
+            {:else}
+              <option value="" disabled>Loading users...</option>
+            {/if}
+          {:else}
+            {#each teamUsers as user}
+              <option value={user.name}>{user.name}</option>
+            {/each}
+          {/if}
         </select>
       </div>
       <div class="fg"><label for="qDepDate">Departure Date</label><input type="date" id="qDepDate" bind:value={qDepDate}></div>
@@ -176,7 +187,17 @@
       <div class="fg">
         <label for="fuExec">Assigned To</label>
         <select id="fuExec" bind:value={fuExec}>
-          <option>Ravi Kumar</option><option>Sneha Patel</option><option>Amit Joshi</option>
+          {#if teamUsers.length === 0}
+            {#if currentUser}
+              <option value={currentUser.name}>{currentUser.name}</option>
+            {:else}
+              <option value="" disabled>Loading users...</option>
+            {/if}
+          {:else}
+            {#each teamUsers as user}
+              <option value={user.name}>{user.name}</option>
+            {/each}
+          {/if}
         </select>
       </div>
       <div class="fg full"><label for="fuNotes">Notes</label><textarea id="fuNotes" bind:value={fuNotes} placeholder="Purpose and notes for this follow-up…"></textarea></div>

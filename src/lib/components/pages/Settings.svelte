@@ -13,7 +13,7 @@
     gstNumber: ''
   });
   let isLoading = $state(true);
-  
+  let activeIntegrationTab = $state('smtp');  
   const tenantId = user?.tenantId || 'default_tenant';
 
   onMount(async () => {
@@ -76,38 +76,107 @@
         </div>
       {/if}
     </div>
-
-    <!-- SMTP Settings, only visible for admin -->
-    {#if user?.role === 'Admin'}
-    <div class="card">
-      <div class="card-title"><i class="ti ti-mail"></i>SMTP Email Settings</div>
-      <p style="font-size: 0.85rem; color: var(--text2); margin-bottom: 12px;">Configure the email server to send emails to clients.</p>
-      {#if isLoading}
-        <div style="padding: 1rem; color: var(--text2);">Loading settings...</div>
-      {:else}
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div class="fg">
-            <label for="smtp-host">SMTP Host</label>
-            <input id="smtp-host" bind:value={settings.smtpSettings!.host} placeholder="smtp.gmail.com">
-          </div>
-          <div class="fg">
-            <label for="smtp-port">SMTP Port</label>
-            <input id="smtp-port" bind:value={settings.smtpSettings!.port} placeholder="465">
-          </div>
-          <div class="fg">
-            <label for="smtp-user">Email Username</label>
-            <input id="smtp-user" bind:value={settings.smtpSettings!.user} placeholder="your-email@gmail.com">
-          </div>
-          <div class="fg">
-            <label for="smtp-pass">Email Password (App Password)</label>
-            <input id="smtp-pass" type="password" bind:value={settings.smtpSettings!.pass} placeholder="Enter password or app password">
-          </div>
-        </div>
-      {/if}
-    </div>
-    {/if}
   </div>
 
-  <!-- Embed Facebook Settings here so they belong to the Settings page -->
-  <FacebookSettings {user} {onAction} />
+  {#if user?.role === 'Admin'}
+    <div class="integrations-section" style="margin-top: 32px;">
+      <h3 style="margin-bottom: 16px;">Integrations</h3>
+      <div class="tabs" style="display: flex; gap: 16px; border-bottom: 1px solid var(--border); margin-bottom: 16px;">
+        <button 
+          class="tab-btn {activeIntegrationTab === 'smtp' ? 'active' : ''}"
+          onclick={() => activeIntegrationTab = 'smtp'}>
+          <i class="ti ti-mail"></i> Email (SMTP)
+        </button>
+        <button 
+          class="tab-btn {activeIntegrationTab === 'whatsapp' ? 'active' : ''}"
+          onclick={() => activeIntegrationTab = 'whatsapp'}>
+          <i class="ti ti-brand-whatsapp" style="color: {activeIntegrationTab === 'whatsapp' ? '#25D366' : 'inherit'}"></i> WhatsApp
+        </button>
+        <button 
+          class="tab-btn {activeIntegrationTab === 'facebook' ? 'active' : ''}"
+          onclick={() => activeIntegrationTab = 'facebook'}>
+          <i class="ti ti-brand-facebook" style="color: {activeIntegrationTab === 'facebook' ? '#1877F2' : 'inherit'}"></i> Facebook
+        </button>
+      </div>
+
+      {#if activeIntegrationTab === 'smtp'}
+        <div class="card">
+          <div class="card-title"><i class="ti ti-mail"></i>SMTP Email Settings</div>
+          <p style="font-size: 0.85rem; color: var(--text2); margin-bottom: 12px;">Configure the email server to send emails to clients.</p>
+          {#if isLoading}
+            <div style="padding: 1rem; color: var(--text2);">Loading settings...</div>
+          {:else}
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div class="fg">
+                <label for="smtp-host">SMTP Host</label>
+                <input id="smtp-host" bind:value={settings.smtpSettings!.host} placeholder="smtp.gmail.com">
+              </div>
+              <div class="fg">
+                <label for="smtp-port">SMTP Port</label>
+                <input id="smtp-port" bind:value={settings.smtpSettings!.port} placeholder="465">
+              </div>
+              <div class="fg">
+                <label for="smtp-user">Email Username</label>
+                <input id="smtp-user" bind:value={settings.smtpSettings!.user} placeholder="your-email@gmail.com">
+              </div>
+              <div class="fg">
+                <label for="smtp-pass">Email Password (App Password)</label>
+                <input id="smtp-pass" type="password" bind:value={settings.smtpSettings!.pass} placeholder="Enter password or app password">
+              </div>
+            </div>
+          {/if}
+        </div>
+      {:else if activeIntegrationTab === 'whatsapp'}
+        <div class="card">
+          <div class="card-title"><i class="ti ti-brand-whatsapp" style="color:#25D366"></i>WhatsApp Business Settings</div>
+          <p style="font-size: 0.85rem; color: var(--text2); margin-bottom: 12px;">Configure your Meta Developer App to send WhatsApp Messages via API.</p>
+          {#if isLoading}
+            <div style="padding: 1rem; color: var(--text2);">Loading settings...</div>
+          {:else}
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div class="fg">
+                <label for="wa-access-token">Permanent Access Token</label>
+                <input id="wa-access-token" type="password" bind:value={settings.whatsappSettings!.accessToken} placeholder="EAA...">
+              </div>
+              <div class="fg">
+                <label for="wa-phone-id">Phone Number ID</label>
+                <input id="wa-phone-id" bind:value={settings.whatsappSettings!.phoneNumberId} placeholder="1234567890">
+              </div>
+              <div class="fg">
+                <label for="wa-business-id">WhatsApp Business Account ID</label>
+                <input id="wa-business-id" bind:value={settings.whatsappSettings!.businessAccountId} placeholder="1234567890">
+              </div>
+            </div>
+          {/if}
+        </div>
+      {:else if activeIntegrationTab === 'facebook'}
+        <!-- Embed Facebook Settings here so they belong to the Settings page -->
+        <FacebookSettings {user} {onAction} />
+      {/if}
+    </div>
+  {/if}
 </div>
+
+<style>
+  .tab-btn {
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    color: var(--text2);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    font-size: 1rem;
+  }
+  .tab-btn:hover {
+    color: var(--text1);
+  }
+  .tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+</style>
