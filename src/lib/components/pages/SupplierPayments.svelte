@@ -6,7 +6,7 @@
   let loading = $state(true);
   
   // KPI state
-  let totalPayable = $state(2240000); // Base mock
+  let totalPayable = $state(0); // Base mock
   let paid = $state(0);
   let pending = $state(0);
 
@@ -38,7 +38,7 @@
       pending = payments.filter(p => p.status === 'scheduled' || p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0);
       
       // Dynamic total
-      totalPayable = paid + pending || 2240000;
+      totalPayable = paid + pending;
     } catch (e) {
       console.error(e);
     }

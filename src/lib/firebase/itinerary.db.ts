@@ -1,5 +1,6 @@
 import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, updateDoc, query, where } from "firebase/firestore";
 import db from "./db";
+import { getCurrentTenantId } from "./user.db";
 
 const ITINERARIES_COLLECTION = "itineraries";
 
@@ -34,23 +35,31 @@ export interface Itinerary {
     qI?: number;
     manualOverride?: boolean;
   };
+  tenantId?: string;
 }
 
 export const fetchItineraries = async (): Promise<Itinerary[]> => {
+  const tenantId = await getCurrentTenantId();
   const col = collection(db, ITINERARIES_COLLECTION);
-  const snapshot = await getDocs(col);
+  const q = query(col, where("tenantId", "==", tenantId));
+  const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Itinerary));
 };
 
 export const fetchItineraryByLeadId = async (leadId: string): Promise<Itinerary | null> => {
+  const tenantId = await getCurrentTenantId();
   const col = collection(db, ITINERARIES_COLLECTION);
-  const q = query(col, where("leadId", "==", leadId));
+  const q = query(col, where("leadId", "==", leadId), where("tenantId", "==", tenantId));
   const snapshot = await getDocs(q);
   if (snapshot.empty) return null;
   return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Itinerary;
 };
 
 export const createItinerary = async (data: Itinerary): Promise<string> => {
+  if (!data.tenantId) {
+    data.tenantId = await getCurrentTenantId();
+  }
+
   if (data.id) {
     const { id, ...rest } = data;
     await setDoc(doc(db, ITINERARIES_COLLECTION, id), rest);

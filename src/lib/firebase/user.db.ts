@@ -8,6 +8,7 @@ import {
   deleteDoc,
   query,
   orderBy,
+  where,
   serverTimestamp,
   setDoc
 } from "firebase/firestore";
@@ -25,14 +26,27 @@ export interface AppUser {
   email: string;
   roles: string[]; // e.g., ['Admin'], ['Sales', 'Operations']
   status: 'Active' | 'Inactive';
+  tenantId?: string;
   createdAt?: any;
   updatedAt?: any;
   activeSessionId?: string;
 }
 
+let cachedTenantId: string | null = null;
+export const getCurrentTenantId = async (): Promise<string> => {
+  if (cachedTenantId) return cachedTenantId;
+  const auth = getAuth(mainApp);
+  if (!auth.currentUser) return "default_tenant";
+  const user = await getUser(auth.currentUser.uid);
+  cachedTenantId = user?.tenantId || "default_tenant";
+  return cachedTenantId;
+};
+export const clearTenantCache = () => { cachedTenantId = null; };
+
 export const getUsers = async (): Promise<AppUser[]> => {
   try {
-    const q = query(usersCollection, orderBy("createdAt", "desc"));
+    const tenantId = await getCurrentTenantId();
+    const q = query(usersCollection, where("tenantId", "==", tenantId), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({
       id: doc.id,
@@ -60,6 +74,11 @@ export const getUser = async (id: string): Promise<AppUser | null> => {
 
 export const addUser = async (user: Omit<AppUser, "id">, defaultPassword?: string): Promise<string> => {
   try {
+    // Inject current tenantId if not provided
+    if (!user.tenantId) {
+      user.tenantId = await getCurrentTenantId();
+    }
+
     // 1. Create the user in Firebase Auth using a secondary app to avoid logging out the current admin
     const secondaryApp = initializeApp(mainApp.options, "SecondaryApp");
     const secondaryAuth = getAuth(secondaryApp);

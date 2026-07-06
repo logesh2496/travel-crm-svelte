@@ -12,6 +12,7 @@ import {
   serverTimestamp
 } from "firebase/firestore";
 import db from "./db";
+import { getCurrentTenantId } from "./user.db";
 
 const COLLECTION_NAME = "b2b_clients";
 const b2bCollection = collection(db, COLLECTION_NAME);
@@ -35,13 +36,15 @@ export interface BizClient {
   totalBusiness: number; // Starts at 0, updated by bookings
   createdAt?: any;
   updatedAt?: any;
+  tenantId?: string;
 }
 
 export const getClients = async (type?: 'b2b' | 'b2c'): Promise<BizClient[]> => {
   try {
-    let q = query(b2bCollection, orderBy("createdAt", "desc"));
+    const tenantId = await getCurrentTenantId();
+    let q = query(b2bCollection, where("tenantId", "==", tenantId), orderBy("createdAt", "desc"));
     if (type) {
-      q = query(b2bCollection, where("type", "==", type), orderBy("createdAt", "desc"));
+      q = query(b2bCollection, where("type", "==", type), where("tenantId", "==", tenantId), orderBy("createdAt", "desc"));
     }
     
     const snapshot = await getDocs(q);
@@ -71,8 +74,13 @@ export const getClientById = async (id: string): Promise<BizClient | null> => {
 
 export const addClient = async (clientData: Omit<BizClient, 'id' | 'createdAt' | 'updatedAt' | 'totalBusiness'>): Promise<string> => {
   try {
+    let tenantId = (clientData as any).tenantId;
+    if (!tenantId) {
+      tenantId = await getCurrentTenantId();
+    }
     const docRef = await addDoc(b2bCollection, {
       ...clientData,
+      tenantId,
       totalBusiness: 0, // Always starts at 0
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

@@ -1,5 +1,6 @@
-import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, updateDoc, query, where } from "firebase/firestore";
 import db from "./db";
+import { getCurrentTenantId } from "./user.db";
 import { logActivity } from "./dashboard.db";
 
 const SUPPLIER_PAYMENTS_COLLECTION = "supplier_payments";
@@ -13,15 +14,22 @@ export interface SupplierPayment {
   status: 'scheduled' | 'paid' | 'overdue';
   dueDate?: string;
   paidDate?: string;
+  tenantId?: string;
 }
 
 export const fetchSupplierPayments = async (): Promise<SupplierPayment[]> => {
+  const tenantId = await getCurrentTenantId();
   const col = collection(db, SUPPLIER_PAYMENTS_COLLECTION);
-  const snap = await getDocs(col);
+  const q = query(col, where("tenantId", "==", tenantId));
+  const snap = await getDocs(q);
   return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupplierPayment));
 };
 
 export const createSupplierPayment = async (payment: SupplierPayment): Promise<string> => {
+  if (!payment.tenantId) {
+    payment.tenantId = await getCurrentTenantId();
+  }
+
   if (payment.id) {
     const { id, ...data } = payment;
     await setDoc(doc(db, SUPPLIER_PAYMENTS_COLLECTION, id), data);

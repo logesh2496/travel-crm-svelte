@@ -1,5 +1,6 @@
-import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, updateDoc, query, where } from "firebase/firestore";
 import db from "./db";
+import { getCurrentTenantId } from "./user.db";
 
 const QUOTATIONS_COLLECTION = "quotations";
 
@@ -24,15 +25,22 @@ export interface Quotation {
   qGst?: number;
   qD?: number;
   currency?: string;
+  tenantId?: string;
 }
 
 export const fetchQuotations = async (): Promise<Quotation[]> => {
+  const tenantId = await getCurrentTenantId();
   const qCol = collection(db, QUOTATIONS_COLLECTION);
-  const qSnapshot = await getDocs(qCol);
+  const q = query(qCol, where("tenantId", "==", tenantId));
+  const qSnapshot = await getDocs(q);
   return qSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Quotation));
 };
 
 export const createQuotation = async (qData: Quotation): Promise<string> => {
+  if (!qData.tenantId) {
+    qData.tenantId = await getCurrentTenantId();
+  }
+
   if (qData.id) {
     const { id, ...data } = qData;
     await setDoc(doc(db, QUOTATIONS_COLLECTION, id), data);

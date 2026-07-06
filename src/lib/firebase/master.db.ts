@@ -1,5 +1,6 @@
 import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, query, where, updateDoc } from "firebase/firestore";
 import db from "./db";
+import { getCurrentTenantId } from "./user.db";
 
 const MASTERS_COLLECTION = "masters";
 
@@ -18,14 +19,17 @@ export interface MasterRecord {
   
   createdAt?: string;
   updatedAt?: string;
+  tenantId?: string;
 }
 
 export const fetchMasters = async (agencyId: string, type: string): Promise<MasterRecord[]> => {
+  const tenantId = await getCurrentTenantId();
   const mastersCol = collection(db, MASTERS_COLLECTION);
   const q = query(
     mastersCol, 
     where("agencyId", "==", agencyId),
-    where("type", "==", type)
+    where("type", "==", type),
+    where("tenantId", "==", tenantId)
   );
   
   const snapshot = await getDocs(q);
@@ -34,6 +38,9 @@ export const fetchMasters = async (agencyId: string, type: string): Promise<Mast
 
 export const saveMaster = async (masterData: MasterRecord): Promise<string> => {
   const timestamp = new Date().toISOString();
+  if (!masterData.tenantId) {
+    masterData.tenantId = await getCurrentTenantId();
+  }
   
   if (masterData.id) {
     const { id, ...data } = masterData;

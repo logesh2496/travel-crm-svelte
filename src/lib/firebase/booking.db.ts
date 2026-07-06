@@ -1,5 +1,6 @@
-import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, updateDoc, query, where } from "firebase/firestore";
 import db from "./db";
+import { getCurrentTenantId } from "./user.db";
 import { incrementDashboardKpi, logActivity, incrementExecutiveStats } from "./dashboard.db";
 
 const BOOKINGS_COLLECTION = "bookings";
@@ -86,15 +87,22 @@ export interface Booking {
   visas?: Visa[];
   insurance?: Insurance[];
   documents?: DocumentReference[];
+  tenantId?: string;
 }
 
 export const fetchBookings = async (): Promise<Booking[]> => {
+  const tenantId = await getCurrentTenantId();
   const bookingsCol = collection(db, BOOKINGS_COLLECTION);
-  const bookingSnapshot = await getDocs(bookingsCol);
+  const q = query(bookingsCol, where("tenantId", "==", tenantId));
+  const bookingSnapshot = await getDocs(q);
   return bookingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
 };
 
 export const createBooking = async (bookingData: Booking): Promise<string> => {
+  if (!bookingData.tenantId) {
+    bookingData.tenantId = await getCurrentTenantId();
+  }
+
   if (bookingData.id) {
     const { id, ...data } = bookingData;
     await setDoc(doc(db, BOOKINGS_COLLECTION, id), data);

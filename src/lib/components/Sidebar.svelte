@@ -27,9 +27,9 @@
     { label: 'Communication', type: 'label', section: 'Communication' },
     { label: 'Client Communication', id: 'communication', icon: 'ti-message-circle', section: 'Communication' },
     
-    { label: 'Reports', type: 'label', section: 'Reports' },
-    { label: 'Reports & Analytics', id: 'reports', icon: 'ti-chart-bar', section: 'Reports' },
-    { label: 'Daily Duty Sheet', id: 'duty-sheet', icon: 'ti-clipboard-list', section: 'Reports' },
+    // { label: 'Reports', type: 'label', section: 'Reports' },
+    // { label: 'Reports & Analytics', id: 'reports', icon: 'ti-chart-bar', section: 'Reports', },
+    // { label: 'Daily Duty Sheet', id: 'duty-sheet', icon: 'ti-clipboard-list', section: 'Reports' },
     
     { label: 'Admin', type: 'label', section: 'Admin' },
     { label: 'User & Role Management', id: 'users', icon: 'ti-user-cog', section: 'Admin' },

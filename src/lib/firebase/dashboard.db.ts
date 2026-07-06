@@ -1,7 +1,7 @@
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, addDoc, query, orderBy, limit, increment } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, addDoc, query, orderBy, limit, increment, where } from "firebase/firestore";
 import db from "./db";
+import { getCurrentTenantId } from "./user.db";
 
-const STATS_DOC_ID = "current";
 const STATS_COLLECTION = "dashboardStats";
 const ACTIVITIES_COLLECTION = "activities";
 const EXECUTIVES_COLLECTION = "salesExecutives";
@@ -30,6 +30,7 @@ export interface Activity {
   timestamp: string; // ISO string
   user: string;
   source: string; // e.g., 'Website', 'Email'
+  tenantId?: string;
 }
 
 export interface SalesExec {
@@ -37,11 +38,13 @@ export interface SalesExec {
   name: string;
   revenue: number;
   bookings: number;
+  tenantId?: string;
 }
 
 // Ensure a default stats document exists if not created yet
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
-  const statsRef = doc(db, STATS_COLLECTION, STATS_DOC_ID);
+  const tenantId = await getCurrentTenantId();
+  const statsRef = doc(db, STATS_COLLECTION, tenantId);
   const statsSnap = await getDoc(statsRef);
   
   if (statsSnap.exists()) {
@@ -79,15 +82,17 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
 };
 
 export const fetchRecentActivities = async (): Promise<Activity[]> => {
+  const tenantId = await getCurrentTenantId();
   const activitiesCol = collection(db, ACTIVITIES_COLLECTION);
-  const q = query(activitiesCol, orderBy('timestamp', 'desc'), limit(10));
+  const q = query(activitiesCol, where("tenantId", "==", tenantId), orderBy('timestamp', 'desc'), limit(10));
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
 };
 
 export const fetchTopExecutives = async (): Promise<SalesExec[]> => {
+  const tenantId = await getCurrentTenantId();
   const execCol = collection(db, EXECUTIVES_COLLECTION);
-  const q = query(execCol, orderBy('revenue', 'desc'), limit(5));
+  const q = query(execCol, where("tenantId", "==", tenantId), orderBy('revenue', 'desc'), limit(5));
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SalesExec));
 };
@@ -95,19 +100,24 @@ export const fetchTopExecutives = async (): Promise<SalesExec[]> => {
 // --- Client-Side Batching/Aggregation Helpers ---
 
 export const logActivity = async (activity: Activity): Promise<void> => {
+  if (!activity.tenantId) {
+    activity.tenantId = await getCurrentTenantId();
+  }
   const activitiesCol = collection(db, ACTIVITIES_COLLECTION);
   await addDoc(activitiesCol, activity);
 };
 
 export const incrementDashboardKpi = async (kpiKey: keyof DashboardStats['kpis'], amount: number = 1): Promise<void> => {
-  const statsRef = doc(db, STATS_COLLECTION, STATS_DOC_ID);
+  const tenantId = await getCurrentTenantId();
+  const statsRef = doc(db, STATS_COLLECTION, tenantId);
   await updateDoc(statsRef, {
     [`kpis.${kpiKey}`]: increment(amount)
   });
 };
 
 export const incrementLeadSource = async (source: string, amount: number = 1): Promise<void> => {
-  const statsRef = doc(db, STATS_COLLECTION, STATS_DOC_ID);
+  const tenantId = await getCurrentTenantId();
+  const statsRef = doc(db, STATS_COLLECTION, tenantId);
   // Map common sources to the object keys safely
   let sourceKey = source;
   if (source === 'B2B Agents') sourceKey = 'B2B_Agents';
@@ -117,7 +127,10 @@ export const incrementLeadSource = async (source: string, amount: number = 1): P
 };
 
 export const incrementExecutiveStats = async (execId: string, execName: string, revenueAmount: number, bookingsCount: number = 1): Promise<void> => {
-  const execRef = doc(db, EXECUTIVES_COLLECTION, execId);
+  const tenantId = await getCurrentTenantId();
+  // We append tenantId to execId so executives don't leak across tenants
+  const tenantExecId = `${execId}_${tenantId}`;
+  const execRef = doc(db, EXECUTIVES_COLLECTION, tenantExecId);
   const execSnap = await getDoc(execRef);
   if (execSnap.exists()) {
     await updateDoc(execRef, {
@@ -129,7 +142,8 @@ export const incrementExecutiveStats = async (execId: string, execName: string, 
     await setDoc(execRef, {
       name: execName,
       revenue: revenueAmount,
-      bookings: bookingsCount
+      bookings: bookingsCount,
+      tenantId
     });
   }
 };

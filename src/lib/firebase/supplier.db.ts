@@ -8,9 +8,11 @@ import {
   deleteDoc,
   query,
   orderBy,
-  serverTimestamp
+  serverTimestamp,
+  where
 } from "firebase/firestore";
 import db from "./db";
+import { getCurrentTenantId } from "./user.db";
 
 const COLLECTION_NAME = "suppliers";
 const suppliersCollection = collection(db, COLLECTION_NAME);
@@ -27,11 +29,13 @@ export interface Supplier {
   bankDetails: string;
   createdAt?: any;
   updatedAt?: any;
+  tenantId?: string;
 }
 
 export const getSuppliers = async (): Promise<Supplier[]> => {
   try {
-    const q = query(suppliersCollection, orderBy("createdAt", "desc"));
+    const tenantId = await getCurrentTenantId();
+    const q = query(suppliersCollection, where("tenantId", "==", tenantId), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({
       id: doc.id,
@@ -59,8 +63,14 @@ export const getSupplierById = async (id: string): Promise<Supplier | null> => {
 
 export const addSupplier = async (supplierData: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   try {
+    let tenantId = (supplierData as any).tenantId;
+    if (!tenantId) {
+      tenantId = await getCurrentTenantId();
+    }
+
     const docRef = await addDoc(suppliersCollection, {
       ...supplierData,
+      tenantId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });

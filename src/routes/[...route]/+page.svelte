@@ -73,8 +73,6 @@
   let unsubscribeSession: any = null;
 
   onMount(() => {
-    loadLeads();
-
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // User signed in
@@ -92,19 +90,29 @@
             roleLbl,
             email: dbUser.email,
             avatar,
-            tenantId: 'default_tenant'
+            tenantId: dbUser.tenantId || 'default_tenant'
           };
           
           isLoggedIn = true;
 
+          // Load data after successful login
+          loadLeads();
+
           // Single Active Session Listener
           if (unsubscribeSession) unsubscribeSession();
           
-          const localSessionId = sessionStorage.getItem('activeSessionId');
+          let isInitialSnapshot = true;
           unsubscribeSession = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
             if (snapshot.exists()) {
               const data = snapshot.data();
-              if (data.activeSessionId && localSessionId && data.activeSessionId !== localSessionId) {
+              const currentLocalSessionId = sessionStorage.getItem('activeSessionId');
+              
+              if (isInitialSnapshot) {
+                isInitialSnapshot = false;
+                return;
+              }
+
+              if (data.activeSessionId && currentLocalSessionId && data.activeSessionId !== currentLocalSessionId) {
                 // Another device logged in
                 triggerToast('Session active on another device. Logging out...', 'error');
                 handleLogout();
@@ -149,6 +157,7 @@
     currentUser = null;
     activePage = 'dashboard';
     pageData = null;
+    sessionStorage.removeItem('activeSessionId');
     triggerToast('Logged out successfully', 'success');
   }
 
