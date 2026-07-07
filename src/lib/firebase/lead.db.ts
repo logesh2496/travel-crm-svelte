@@ -9,6 +9,7 @@ export interface Lead {
   leadId?: string;
   name: string;
   phone: string;
+  email?: string;
   dest: string;
   date: string;
   budget: string;

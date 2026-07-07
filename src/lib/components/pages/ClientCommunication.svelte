@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { fetchAgencySettings, saveAgencySettings, type AgencySettings } from '$lib/firebase/settings.db';
   import { fetchItineraries, type Itinerary } from '$lib/firebase/itinerary.db';
+  import { fetchLeads, type Lead } from '$lib/firebase/lead.db';
+  import ItineraryPDFTemplate from '../ui/ItineraryPDFTemplate.svelte';
   import RichTextEditor from '../ui/RichTextEditor.svelte';
   import { render } from 'svelte-email';
   import DefaultEmailTemplate from '../emails/DefaultEmailTemplate.svelte';
@@ -9,9 +11,10 @@
   import type { ItineraryDay } from '../emails/ItineraryEmailTemplate.svelte';
   import { getFunctions, httpsCallable } from 'firebase/functions';
 
-  let { user, onAction } = $props<{
+  let { user, onAction, pageData } = $props<{
     user: any;
     onAction: (actionName: string, data?: any) => void;
+    pageData?: any;
   }>();
 
   let activeCommTab = $state('email');
@@ -25,6 +28,74 @@
   let itineraryDays = $state<ItineraryDay[]>([]);
   let itineraries = $state<Itinerary[]>([]);
   let selectedItineraryId = $state<string>('');
+  let pdfAttachment = $state<{ filename: string; base64: string } | null>(null);
+  let selectedItinerary = $state<Itinerary | null>(null);
+  let leads = $state<Lead[]>([]);
+  let isGeneratingPdf = $state(false);
+
+  async function onItinerarySelected() {
+    selectedItinerary = itineraries.find(i => i.id === selectedItineraryId) || null;
+    if (selectedItinerary) {
+      emailSubj = `Your Itinerary from ${settings?.agencyName || 'TravelCRM'}: ${selectedItinerary.title}`;
+      emailMessage = `Hi,\n\nPlease find your itinerary for ${selectedItinerary.destination} attached.\n\nBest Regards,\n${settings?.agencyName || 'TravelCRM'}`;
+      
+      const lead = leads.find(l => l.leadId === selectedItinerary!.leadId);
+      if (lead) {
+        // Since lead might not have an email field by default, we cast it to any to read it if it exists.
+        emailTo = (lead as any).email || emailTo || '';
+      }
+
+      // Generate PDF
+      isGeneratingPdf = true;
+      onAction('toast', { msg: 'Generating PDF...', type: 'info' });
+      await tick();
+      const element = document.getElementById('pdf-export-content');
+      if (element) {
+        try {
+          // @ts-ignore
+          const html2pdfModule = await import('html2pdf.js');
+          const html2pdf = html2pdfModule.default || html2pdfModule;
+          const opt = {
+            margin:       10,
+            filename:     `${selectedItinerary.title || 'Itinerary'}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
+          const base64 = await html2pdf().set(opt).from(element).output('datauristring');
+          pdfAttachment = {
+            filename: opt.filename,
+            base64
+          };
+          onAction('toast', { msg: 'PDF generated and attached!', type: 'success' });
+        } catch (e) {
+          console.error(e);
+          onAction('toast', { msg: 'Failed to generate PDF', type: 'error' });
+        }
+      }
+      isGeneratingPdf = false;
+    } else {
+      emailSubj = '';
+      emailMessage = '';
+      pdfAttachment = null;
+    }
+  }
+  $effect(() => {
+    if (pageData && pageData.emailTplType === 'itinerary') {
+      emailTplType = 'itinerary';
+      if (pageData.selectedItineraryId && !selectedItineraryId) {
+        selectedItineraryId = pageData.selectedItineraryId;
+        // set default subject when selected
+        emailSubj = `Your Itinerary from ${settings?.agencyName || 'TravelCRM'}`;
+      }
+      if (pageData.pdfBase64 && !pdfAttachment) {
+        pdfAttachment = {
+          filename: pageData.pdfName || 'Itinerary.pdf',
+          base64: pageData.pdfBase64
+        };
+      }
+    }
+  });
   
   let includeHeader = $state(true);
   let includeFooter = $state(true);
@@ -62,6 +133,7 @@
       customHeader = settings?.emailHeader || defaultHeader;
       customFooter = settings?.emailFooter || defaultFooter;
       itineraries = await fetchItineraries();
+      leads = await fetchLeads();
     } catch (e) {
       console.error(e);
     }
@@ -127,12 +199,20 @@
       const functions = getFunctions();
       const sendEmailFn = httpsCallable(functions, 'sendEmail');
       
-      await sendEmailFn({
+      const payload: any = {
         to: emailTo,
         subject: emailSubj,
         html: htmlOutput,
         tenantId: user?.tenantId || 'default_tenant'
-      });
+      };
+
+      if (pdfAttachment) {
+        payload.attachments = [
+          { filename: pdfAttachment.filename, path: pdfAttachment.base64 }
+        ];
+      }
+
+      await sendEmailFn(payload);
 
       onAction('toast', { msg: 'Email sent successfully!', type: 'success' });
       // Reset form
@@ -140,6 +220,7 @@
       emailSubj = '';
       emailMessage = '';
       itineraryDays = [];
+      pdfAttachment = null;
     } catch (e: any) {
       console.error(e);
       onAction('toast', { msg: e.message || 'Failed to send email.', type: 'error' });
@@ -262,6 +343,21 @@
 </script>
 
 <div class="page active" id="page-communication">
+  {#if selectedItinerary}
+    <div style="position: absolute; left: -9999px; top: -9999px; width: 800px;">
+      <ItineraryPDFTemplate
+        itinTitle={selectedItinerary.title}
+        itheme={selectedItinerary.theme}
+        itinDest={selectedItinerary.destination}
+        istart={selectedItinerary.startDate}
+        nights={Math.max(selectedItinerary.days.length - 1, 1)}
+        itinDays={selectedItinerary.days}
+        pax={selectedItinerary.adults + selectedItinerary.children}
+        finalCost={selectedItinerary.costing?.finalCost || 0}
+      />
+    </div>
+  {/if}
+
   <div class="ph"><h2>Client Communication</h2></div>
   <div class="tabs">
     <button class="tab" class:active={activeCommTab === 'email'} onclick={() => activeCommTab = 'email'} type="button" style="background: none; border: none; font: inherit; cursor: pointer;">Email</button>
@@ -275,6 +371,17 @@
         <div class="card" style="grid-column: span 1;">
           <div class="card-title"><i class="ti ti-mail"></i>Compose Email</div>
           <div style="display:flex;flex-direction:column;gap:12px">
+            {#if emailTplType === 'itinerary'}
+              <div class="fg" style="margin-bottom: 0px;">
+                <label>Select Saved Itinerary</label>
+                <select bind:value={selectedItineraryId} onchange={onItinerarySelected}>
+                  <option value="">-- Choose Itinerary --</option>
+                  {#each itineraries as itin}
+                    <option value={itin.id}>{itin.title} ({itin.destination})</option>
+                  {/each}
+                </select>
+              </div>
+            {/if}
             <div class="fg"><label for="eto">To</label><input id="eto" bind:value={emailTo} placeholder="client@email.com"></div>
             <div style="display:flex; align-items:center; justify-content: space-between; margin-bottom: 16px;">
               
@@ -324,21 +431,19 @@
                 <label style="font-weight:600; font-size: 14px;">Email Content</label>
               </div>
               <div style="padding: 12px;">
-                 {#if emailTplType === 'itinerary'}
-                   <div class="fg" style="margin-bottom: 12px;">
-                     <label>Select Saved Itinerary</label>
-                     <select bind:value={selectedItineraryId}>
-                       <option value="">-- Choose Itinerary --</option>
-                       {#each itineraries as itin}
-                         <option value={itin.id}>{itin.title} ({itin.destination})</option>
-                       {/each}
-                     </select>
-                   </div>
-                 {/if}
                  <div class="fg">
                    <label>{emailTplType === 'itinerary' ? 'Greeting / Intro Text' : 'Message'}</label>
                    <RichTextEditor bind:html={emailMessage} />
                  </div>
+                 {#if pdfAttachment}
+                   <div style="margin-top: 12px; padding: 8px; border: 1px solid var(--border); border-radius: 4px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc;">
+                     <div style="display: flex; align-items: center; gap: 8px; color: var(--text);">
+                       <i class="ti ti-file-text" style="color: var(--teal); font-size: 18px;"></i>
+                       <span style="font-size: 13px; font-weight: 500;">{pdfAttachment.filename} (Attached)</span>
+                     </div>
+                     <button class="btn btn-sm" style="color: var(--danger); border: none; background: transparent; padding: 4px;" onclick={() => pdfAttachment = null}><i class="ti ti-x"></i></button>
+                   </div>
+                 {/if}
               </div>
 
             </div>

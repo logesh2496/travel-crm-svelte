@@ -135,6 +135,13 @@
       newUrl.searchParams.delete('action');
       window.history.replaceState({}, '', newUrl);
     }
+
+    if (activePage === 'followups' && pageData?.action === 'new') {
+      openModalId = 'addFUModal';
+      const newData = { ...pageData };
+      delete newData.action;
+      pageData = newData;
+    }
   });
 
   async function handleLogout() {
@@ -152,11 +159,11 @@
   }
 
   function handleNavigate(pageId: string, data?: any) {
-    if (pageId === 'dashboard') {
-      goto('/', { keepFocus: true });
-    } else {
-      goto(`/${pageId}`, { keepFocus: true });
+    let url = pageId === 'dashboard' ? '/' : `/${pageId}`;
+    if (pageId === 'itineraries' && data?.leadId) {
+      url += `?lead=${data.leadId}`;
     }
+    goto(url, { keepFocus: true });
     pageData = data;
   }
 
@@ -274,6 +281,7 @@
         {:else if activePage === 'queries' || activePage === 'leads'}
           <LeadsPage 
             leads={leads} 
+            teamUsers={teamUsers}
             onNavigate={handleNavigate} 
             onOpenModal={(id) => openModalId = id} 
             onAction={handleAction} 
@@ -313,6 +321,7 @@
     leads={leads}
     teamUsers={teamUsers}
     currentUser={currentUser}
+    pageData={pageData}
   />
 {/if}
 

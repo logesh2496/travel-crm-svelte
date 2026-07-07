@@ -234,7 +234,7 @@
   <MastersPage />
 
 {:else if activePage === 'communication'}
-  <ClientCommunication {user} {onAction} />
+  <ClientCommunication {user} {onAction} {pageData} />
 
 {:else if activePage === 'reports'}
   <div class="page active" id="page-reports">

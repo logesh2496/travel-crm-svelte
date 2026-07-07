@@ -37,6 +37,7 @@
 		"chart.js": "^4.5.1",
 		"crypto-js": "^4.2.0",
 		"firebase": "^12.15.0",
+		"html2pdf.js": "^0.14.0",
 		"nodemailer": "^9.0.1",
 		"svelte-email": "^0.0.4"
 	}

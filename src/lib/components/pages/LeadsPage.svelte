@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Lead } from '$lib/firebase/lead.db';
 
-  let { leads = [], onNavigate, onOpenModal, onAction } = $props<{
+  let { leads = [], teamUsers = [], onNavigate, onOpenModal, onAction } = $props<{
     leads: Lead[];
+    teamUsers?: any[];
     onNavigate: (page: string, data?: any) => void;
     onOpenModal: (modalId: string) => void;
     onAction: (actionName: string, data?: any) => void;
@@ -13,8 +14,6 @@
   
   // Actions state
   let viewLead = $state<Lead | null>(null);
-  let editingRowId = $state<string | null>(null);
-  let editForm = $state<Partial<Lead>>({});
 
   const tabs = [
     { label: 'All', value: 'all' },
@@ -95,8 +94,10 @@
       <option>B2B Agent</option><option>Walk-in</option>
     </select>
     <select>
-      <option>All Executives</option><option>Ravi Kumar</option><option>Sneha Patel</option>
-      <option>Amit Joshi</option><option>Divya Nair</option>
+      <option>All Executives</option>
+      {#each teamUsers as user}
+        <option value={user.name}>{user.name}</option>
+      {/each}
     </select>
     <select>
       <option>All Priority</option><option>Urgent</option><option>High</option>
@@ -114,6 +115,7 @@
           <tr>
             <th>Lead ID</th>
             <th>Customer</th>
+            <th>Email</th>
             <th>Phone</th>
             <th>Destination</th>
             <th>Travel Date</th>
@@ -122,73 +124,24 @@
             <th>Executive</th>
             <th>Priority</th>
             <th>Status</th>
-            <th>Follow-Up</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {#each filteredLeads as q}
-            {#if editingRowId === q.leadId}
-            <tr>
-              <td style="font-family:monospace;font-size:12px;color:var(--text2)">{q.leadId || 'TEMP'}</td>
-              <td>
-                <input bind:value={editForm.name} style="width: 100px; font-size: 12px; padding: 2px" />
-                <input bind:value={editForm.phone} style="width: 100px; font-size: 12px; padding: 2px; margin-top: 2px" />
-              </td>
-              <td></td>
-              <td><input bind:value={editForm.dest} style="width: 80px; font-size: 12px; padding: 2px" /></td>
-              <td><input type="date" bind:value={editForm.date} style="width: 100px; font-size: 12px; padding: 2px" /></td>
-              <td><input bind:value={editForm.budget} style="width: 80px; font-size: 12px; padding: 2px" /></td>
-              <td>
-                <select bind:value={editForm.src} style="width: 70px; font-size: 12px; padding: 2px">
-                  <option>Website</option><option>WhatsApp</option><option>Facebook</option>
-                  <option>Instagram</option><option>Referral</option><option>B2B Agent</option><option>Walk-in</option>
-                </select>
-              </td>
-              <td>
-                <select bind:value={editForm.exec} style="width: 80px; font-size: 12px; padding: 2px">
-                  <option>Ravi Kumar</option><option>Sneha Patel</option><option>Amit Joshi</option><option>Divya Nair</option>
-                </select>
-              </td>
-              <td>
-                <select bind:value={editForm.pri} style="width: 70px; font-size: 12px; padding: 2px">
-                  <option>Urgent</option><option>High</option><option>Normal</option><option>Low</option>
-                </select>
-              </td>
-              <td>
-                <select bind:value={editForm.status} style="width: 80px; font-size: 12px; padding: 2px">
-                  <option>New</option><option>Contacted</option><option>Quote Sent</option>
-                  <option>Follow-Up</option><option>Negotiation</option><option>Confirmed</option><option>Lost</option>
-                </select>
-              </td>
-              <td></td>
-              <td>
-                <div style="display:flex;gap:4px">
-                  <button class="icon-btn" title="Save" onclick={() => {
-                    onAction('update-lead', editForm);
-                    editingRowId = null;
-                  }} type="button">
-                    <i class="ti ti-device-floppy" style="color:var(--success)"></i>
-                  </button>
-                  <button class="icon-btn" title="Cancel" onclick={() => editingRowId = null} type="button">
-                    <i class="ti ti-x" style="color:var(--danger)"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-            {:else}
+
             <tr>
               <td style="font-family:monospace;font-size:12px;color:var(--text2)">{q.leadId || 'TEMP'}</td>
               <td>
                 <div class="td-strong">{q.name}</div>
-                <div class="td-sub">{q.phone}</div>
               </td>
+              <td style="font-size:12px">{q.email || '-'}</td>
               <td style="font-size:12px">{q.phone}</td>
               <td>{q.dest}</td>
               <td style="font-size:12px">{q.date}</td>
               <td class="td-strong">{q.budget}</td>
               <td><span class="badge b-gray" style="font-size:10px">{q.src}</span></td>
-              <td style="font-size:12px">{q.exec}</td>
+              <td style="font-size:12px">{q.exec || '-'}</td>
               <td>
                 <select class="badge {PBADGE[q.pri] || 'b-gray'}" style="font-size:10px; border:none; outline:none; cursor:pointer;" 
                   value={q.pri} 
@@ -213,22 +166,17 @@
                 </select>
               </td>
               <td>
-                <button class="btn btn-xs" onclick={() => onAction('toast', { msg: 'Follow-up scheduled!', type: 'success' })} type="button">
-                  <i class="ti ti-calendar-plus"></i>
-                </button>
-              </td>
-              <td>
                 <div style="display:flex;gap:4px">
-                  <button class="icon-btn" title="View" onclick={() => viewLead = q} type="button">
-                    <i class="ti ti-eye"></i>
-                  </button>
-                  <button class="icon-btn" title="Edit" onclick={() => { editingRowId = q.leadId || null; editForm = { ...q }; }} type="button">
+                  <button class="icon-btn" data-tooltip="Edit" onclick={() => viewLead = { ...q }} type="button">
                     <i class="ti ti-edit"></i>
                   </button>
-                  <button class="icon-btn" title="Quote" onclick={() => onNavigate('itineraries', { leadId: q.leadId })} type="button">
+                  <button class="icon-btn" data-tooltip="Quote" onclick={() => onNavigate('itineraries', { leadId: q.leadId })} type="button">
                     <i class="ti ti-file-text"></i>
                   </button>
-                  <button class="icon-btn" title="WA" 
+                  <button class="icon-btn" data-tooltip="Follow-up" onclick={() => onNavigate('followups', { action: 'new', leadId: q.leadId, leadName: q.name })} type="button">
+                    <i class="ti ti-calendar-plus"></i>
+                  </button>
+                  <!-- <button class="icon-btn" title="WA" 
                     onclick={() => {
                       const waUrl = 'https://wa.me/' + q.phone.replace(/\D/g, '') + '?text=' + encodeURIComponent('Hello ' + q.name + ', here is your quotation details...');
                       window.open(waUrl, '_blank');
@@ -242,11 +190,11 @@
                   <button class="icon-btn" title="Confirm" onclick={() => onAction('update-lead', { leadId: q.leadId, status: 'Confirmed' })} type="button">
                     <i class="ti ti-circle-check" style="color:var(--success)"></i>
                   </button>
-                  {/if}
+                  {/if} -->
                 </div>
               </td>
             </tr>
-            {/if}
+
           {/each}
         </tbody>
       </table>
@@ -281,22 +229,50 @@
 {#if viewLead}
 <div class="modal-overlay open" onclick={(e) => e.target === e.currentTarget && (viewLead = null)} role="dialog">
   <div class="modal modal-lg">
-    <div class="modal-title"><i class="ti ti-eye"></i>View Lead</div>
+    <div class="modal-title"><i class="ti ti-eye"></i>View/Edit Lead</div>
     <div class="fgrid">
-      <div class="fg"><label>Customer Name</label><div>{viewLead.name}</div></div>
-      <div class="fg"><label>Mobile Number</label><div>{viewLead.phone}</div></div>
-      <div class="fg"><label>Destination</label><div>{viewLead.dest}</div></div>
-      <div class="fg"><label>Lead Source</label><div>{viewLead.src}</div></div>
-      <div class="fg"><label>Assigned Executive</label><div>{viewLead.exec}</div></div>
-      <div class="fg"><label>Departure Date</label><div>{viewLead.date}</div></div>
-      <div class="fg"><label>Budget (₹)</label><div>{viewLead.budget}</div></div>
-      <div class="fg"><label>Priority</label><div><span class="badge {PBADGE[viewLead.pri] || 'b-gray'}">{viewLead.pri}</span></div></div>
-      <div class="fg full"><label>Status</label><div><span class="badge {SBADGE[viewLead.status] || 'b-gray'}">{viewLead.status}</span></div></div>
-      <div class="fg full"><label>Notes</label><div>{viewLead.notes || 'No special requirements noted.'}</div></div>
+      <div class="fg"><label>Customer Name</label><input class="input" bind:value={viewLead.name} style="width: 100%; border: 1px solid var(--border2); border-radius: 4px; padding: 8px; font-size: 13px;" /></div>
+      <div class="fg"><label>Mobile Number</label><input class="input" bind:value={viewLead.phone} style="width: 100%; border: 1px solid var(--border2); border-radius: 4px; padding: 8px; font-size: 13px;" /></div>
+      <div class="fg"><label>Email</label><input class="input" bind:value={viewLead.email} style="width: 100%; border: 1px solid var(--border2); border-radius: 4px; padding: 8px; font-size: 13px;" /></div>
+      <div class="fg"><label>Destination</label><input class="input" bind:value={viewLead.dest} style="width: 100%; border: 1px solid var(--border2); border-radius: 4px; padding: 8px; font-size: 13px;" /></div>
+      <div class="fg">
+        <label>Lead Source</label>
+        <select class="input" bind:value={viewLead.src} style="width: 100%; border: 1px solid var(--border2); border-radius: 4px; padding: 8px; font-size: 13px;">
+          <option>Website</option><option>WhatsApp</option><option>Facebook</option>
+          <option>Instagram</option><option>Referral</option><option>B2B Agent</option><option>Walk-in</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Assigned Executive</label>
+        <select class="input" bind:value={viewLead.exec} style="width: 100%; border: 1px solid var(--border2); border-radius: 4px; padding: 8px; font-size: 13px;">
+          {#each teamUsers as user}
+            <option value={user.name}>{user.name}</option>
+          {/each}
+        </select>
+      </div>
+      <div class="fg"><label>Departure Date</label><input type="date" class="input" bind:value={viewLead.date} style="width: 100%; border: 1px solid var(--border2); border-radius: 4px; padding: 8px; font-size: 13px;" /></div>
+      <div class="fg"><label>Budget (₹)</label><input class="input" bind:value={viewLead.budget} style="width: 100%; border: 1px solid var(--border2); border-radius: 4px; padding: 8px; font-size: 13px;" /></div>
+      <div class="fg">
+        <label>Priority</label>
+        <select class="input" bind:value={viewLead.pri} style="width: 100%; border: 1px solid var(--border2); border-radius: 4px; padding: 8px; font-size: 13px;">
+          <option>Urgent</option><option>High</option><option>Normal</option><option>Low</option>
+        </select>
+      </div>
+      <div class="fg full">
+        <label>Status</label>
+        <select class="input" bind:value={viewLead.status} style="width: 100%; border: 1px solid var(--border2); border-radius: 4px; padding: 8px; font-size: 13px;">
+          <option>New</option><option>Contacted</option><option>Quote Sent</option>
+          <option>Follow-Up</option><option>Negotiation</option><option>Confirmed</option><option>Lost</option>
+        </select>
+      </div>
+      <div class="fg full"><label>Notes</label><textarea class="input" bind:value={viewLead.notes} placeholder="No special requirements noted." style="width: 100%; border: 1px solid var(--border2); border-radius: 4px; padding: 8px; font-size: 13px; min-height: 80px;"></textarea></div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-teal" onclick={() => { const qId = viewLead?.leadId; viewLead = null; onNavigate('itineraries', { leadId: qId }); }} type="button"><i class="ti ti-file-text"></i>Create Quote</button>
-      <button class="btn" onclick={() => viewLead = null} type="button">Close</button>
+      <button class="btn btn-primary" onclick={() => {
+        onAction('update-lead', viewLead);
+        viewLead = null;
+      }} type="button"><i class="ti ti-device-floppy"></i>Save Changes</button>
+      <button class="btn" onclick={() => viewLead = null} type="button">Cancel</button>
     </div>
   </div>
 </div>

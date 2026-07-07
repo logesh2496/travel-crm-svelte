@@ -1,13 +1,14 @@
 <script lang="ts">
   import type { Lead as LeadType } from '$lib/firebase/lead.db';
 
-  let { openModalId, onClose, onSave, leads = [], teamUsers = [], currentUser = null } = $props<{
+  let { openModalId, onClose, onSave, leads = [], teamUsers = [], currentUser = null, pageData = null } = $props<{
     openModalId: string | null;
     onClose: () => void;
     onSave: (type: string, data: any) => void;
     leads?: LeadType[];
     teamUsers?: any[];
     currentUser?: any;
+    pageData?: any;
   }>();
 
   // New Query Form States
@@ -49,6 +50,7 @@
     const leadData: LeadType = {
       name: qName,
       phone: qPhone,
+      email: qEmail,
       dest: qDest,
       date: qDepDate || new Date().toISOString().split('T')[0],
       budget: qBudget ? '₹' + parseInt(qBudget).toLocaleString('en-IN') : '₹1,50,000',
@@ -75,6 +77,12 @@
     onSave('followup', { fuLead, fuDate, fuTime, fuType, fuExec, fuNotes });
     fuNotes = '';
   }
+
+  $effect(() => {
+    if (openModalId === 'addFUModal' && pageData?.leadId && pageData?.leadName) {
+      fuLead = `${pageData.leadId} — ${pageData.leadName}`;
+    }
+  });
 
   // Record Payment Form States
   let payBooking = $state('BK-24-041 — Mehta Family');
